@@ -1,0 +1,22 @@
+version: "3.5"
+
+services:
+  source.database.io:
+    image: thiagobrandam/pgdiff
+    build: .
+    env_file:
+      - database.env
+    ports:
+      - 54532:5432
+    volumes:
+      - ./entrypoints/source.sh:/docker-entrypoint-initdb.d/setup.sh
+
+  target.database.io:
+    image: thiagobrandam/pgdiff
+    build: .
+    env_file:
+      - database.env
+    ports:
+      - 54533:5432
+    volumes:
+      - ./entrypoints/target.sh:/docker-entrypoint-initdb.d/setup.sh
