@@ -33,7 +33,7 @@ module PgDiff
     end
 
     def table_options(table_name)
-      schema, table = table_name =~ /\./ ? table_name.split(".") : ["public", table_name]
+      schema, table = schema_and_table(table_name)
 
       exec(%Q{
         SELECT relhasoids
@@ -43,10 +43,37 @@ module PgDiff
       })
     end
 
+    def table_columns(table_name)
+      schema, table = schema_and_table(table_name)
+
+      exec(%Q{SELECT a.attname, a.attnotnull, t.typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
+                  CASE
+                      WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
+                      WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
+                      ELSE null
+                  END AS precision,
+                  CASE
+                      WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) & 65535
+                      ELSE null
+                  END AS scale
+                  FROM pg_attribute a
+                  INNER JOIN pg_type t ON t.oid = a.atttypid
+          LEFT JOIN pg_attrdef ad on ad.adrelid = a.attrelid AND a.attnum = ad.adnum
+          INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
+          INNER JOIN pg_class c ON c.relname = '#{table}' AND c.relnamespace = n."oid"
+                  WHERE attrelid = c."oid" AND attnum > 0 AND attisdropped = false
+          ORDER BY a.attnum ASC
+      });
+    end
+
     private
 
     def exec(query)
       @connection.exec(query).entries
+    end
+
+    def schema_and_table(table)
+      table =~ /\./ ? table.split(".") : ["public", table]
     end
   end
 end
