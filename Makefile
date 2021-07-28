@@ -3,8 +3,11 @@ build:
 
 up:
 	@make -s down
-	@docker-compose up source.database.io
-	@docker-compose up target.database.io
+	@docker-compose up -d source.database.io
+	@docker-compose up -d target.database.io
 
 down:
 	@docker-compose down
+
+console:
+	@bundle exec pry -r ./lib/pgdiff.rb
