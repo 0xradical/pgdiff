@@ -9,4 +9,6 @@ gem "pg"
 
 group :development do
   gem "pry"
+  gem "minitest"
+  gem "rake"
 end

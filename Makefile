@@ -10,4 +10,7 @@ down:
 	@docker-compose down
 
 console:
-	@bundle exec pry -r ./lib/pgdiff.rb
+	@bundle exec pry -r ./test/pgdiff.rb
+
+test: up
+	@bundle exec rake test
