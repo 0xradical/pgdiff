@@ -8,6 +8,10 @@ module PgDiff
         @constraints = []
       end
 
+      def world_type
+        "TYPE"
+      end
+
       def name
         "#{schema}.#{@data['name']}"
       end
@@ -18,11 +22,11 @@ module PgDiff
         end
       end
 
-      def id
+      def to_s
         %Q{
           DOMAIN #{name} AS #{data_type} #{'NOT NULL' if not_null == 't'} #{'DEFAULT ' + default if default}
           #{
-            constraints.map(&:id).join("\n") if constraints.length > 0
+            constraints.map(&:to_s).join("\n") if constraints.length > 0
           }
         }
       end

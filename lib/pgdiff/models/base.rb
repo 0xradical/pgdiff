@@ -5,8 +5,8 @@ module PgDiff
         @data = data
       end
 
-      def id; @data; end
-      def inspect; id; end
+      def to_s; @data; end
+      def inspect; to_s; end
 
       def add
         raise "Not Implemented Error"
@@ -18,6 +18,25 @@ module PgDiff
 
       def change(to)
         raise "Not Implemented Error"
+      end
+
+      # identity from pg_identify_object
+      def world_id
+        identity
+      end
+
+      # type from pg_identify_object
+      def world_type
+        raise "Not Implemented Error"
+      end
+
+      # objid from pg_depend
+      def id
+        raise "Not Implemented Error"
+      end
+
+      def dependencies
+        Pg::Diff::World[world_id] || []
       end
 
       def method_missing(m, *a, &b)

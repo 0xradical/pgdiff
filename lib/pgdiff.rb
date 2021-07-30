@@ -3,6 +3,7 @@ require "pg"
 module PgDiff; end
 
 require_relative "pgdiff/utils.rb"
+require_relative "pgdiff/world.rb"
 require_relative "pgdiff/models/base.rb"
 require_relative "pgdiff/models/extension.rb"
 require_relative "pgdiff/models/aggregate.rb"

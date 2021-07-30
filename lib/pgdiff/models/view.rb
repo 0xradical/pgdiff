@@ -17,10 +17,14 @@ module PgDiff
         "#{schemaname}.#{viewname}"
       end
 
-      def id
+      def world_type
+        materialized? ? "MATERIALIZED VIEW": "VIEW"
+      end
+
+      def to_s
         %Q{
           #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name}
-          #{privileges.map(&:id).join("\n") if privileges.length > 0}
+          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
         }
       end
 

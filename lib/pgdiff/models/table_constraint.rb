@@ -29,8 +29,12 @@ module PgDiff
         }.fetch(contype, "UNKNOWN")
       end
 
-      def id
+      def to_s
         "TABLE CONSTRAINT #{name} #{type} #{definition}"
+      end
+
+      def world_type
+        "TABLE CONSTRAINT"
       end
 
       def add

@@ -22,7 +22,17 @@ module PgDiff
         usename
       end
 
-      def id
+
+      def world_type
+        "SEQUENCE PRIVILEGE"
+      end
+
+      # privileges don't have identities
+      def world_id
+        name
+      end
+
+      def to_s
         "SEQUENCE PRIVILEGE #{user} #{operations.join(", ")}"
       end
 

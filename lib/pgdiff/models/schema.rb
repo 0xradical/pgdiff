@@ -5,8 +5,12 @@ module PgDiff
         nspname
       end
 
-      def id
+      def to_s
         "SCHEMA #{nspname}"
+      end
+
+      def world_type
+        "SCHEMA"
       end
 
       def add

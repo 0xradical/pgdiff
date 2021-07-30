@@ -5,7 +5,11 @@ module PgDiff
         "#{schema}.#{@data['name']}"
       end
 
-      def id
+      def world_type
+        "TYPE"
+      end
+
+      def to_s
         "ENUM #{name} #{elements}"
       end
 

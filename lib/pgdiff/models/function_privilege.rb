@@ -16,7 +16,16 @@ module PgDiff
         usename
       end
 
-      def id
+      def world_type
+        "FUNCTION PRIVILEGE"
+      end
+
+      # privileges don't have identities
+      def world_id
+        name
+      end
+
+      def to_s
         "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}(#{argtypes})"
       end
 

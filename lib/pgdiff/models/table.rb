@@ -20,14 +20,18 @@ module PgDiff
         tableowner
       end
 
-      def id
+      def world_type
+        "TABLE"
+      end
+
+      def to_s
         %Q{
           TABLE #{name}
-          #{columns.map(&:id).join("\n") if columns.length > 0}
-          #{constraints.map(&:id).join("\n") if constraints.length > 0}
-          #{indexes.map(&:id).join("\n") if indexes.length > 0}
-          #{options.map(&:id).join("\n") if options.length > 0}
-          #{privileges.map(&:id).join("\n") if privileges.length > 0}
+          #{columns.map(&:to_s).join("\n") if columns.length > 0}
+          #{constraints.map(&:to_s).join("\n") if constraints.length > 0}
+          #{indexes.map(&:to_s).join("\n") if indexes.length > 0}
+          #{options.map(&:to_s).join("\n") if options.length > 0}
+          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
         }
       end
 

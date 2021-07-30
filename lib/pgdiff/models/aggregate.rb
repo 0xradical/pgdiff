@@ -5,11 +5,15 @@ module PgDiff
         "#{nspname}.#{proname}"
       end
 
-      def id
+      def to_s
         %Q{
           AGGREGATE #{name}(#{argtypes})
           #{definition}
         }
+      end
+
+      def world_type
+        "AGGREGATE"
       end
 
       def add

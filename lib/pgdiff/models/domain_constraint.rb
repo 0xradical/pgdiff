@@ -8,7 +8,11 @@ module PgDiff
         @domain = domain
       end
 
-      def id
+      def world_type
+        "DOMAIN CONSTRAINT"
+      end
+
+      def to_s
         "DOMAIN CONSTRAINT #{constraint_name} #{definition}"
       end
 

@@ -22,13 +22,17 @@ module PgDiff
         "#{nspname}.#{proname}"
       end
 
-      def id
+      def to_s
         %Q{
           FUNCTION #{name}(#{argtypes})
           #{
-            privileges.map(&:id).join("\n") if privileges.length > 0
+            privileges.map(&:to_s).join("\n") if privileges.length > 0
            }
         }
+      end
+
+      def world_type
+        "FUNCTION"
       end
 
       def add

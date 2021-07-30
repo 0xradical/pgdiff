@@ -8,6 +8,14 @@ module PgDiff
         @table = table
       end
 
+      def world_type
+        "TABLE COLUMN"
+      end
+
+      def world_id
+        name
+      end
+
       def name
         attname
       end
@@ -52,7 +60,7 @@ module PgDiff
         typcategory
       end
 
-      def id
+      def to_s
         "TABLE COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}"
       end
 

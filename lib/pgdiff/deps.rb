@@ -26,8 +26,53 @@
 #   WHERE conname ~ '^product.*_fk'
 #   ));
 
+###### Types of type on pg_depend #######
+# ACCESS METHOD
+# AGGREGATE
+# CAST
+# COLLATION
+# CONVERSION
+# DEFAULT VALUE
+# DOMAIN CONSTRAINT
+# EXTENSION
+# FUNCTION
+# FUNCTION OF ACCESS METHOD
+# INDEX
+# LANGUAGE
+# MATERIALIZED VIEW
+# OPERATOR
+# OPERATOR CLASS
+# OPERATOR FAMILY
+# OPERATOR OF ACCESS METHOD
+# RULE
+# SCHEMA
+# SEQUENCE
+# TABLE
+# TABLE CONSTRAINT
+# TEXT SEARCH CONFIGURATION
+# TEXT SEARCH DICTIONARY
+# TEXT SEARCH TEMPLATE
+# TOAST TABLE
+# TRIGGER
+# TYPE
+# VIEW
+
 module PgDiff
   class Deps
+    CLASSES = {
+      "SCHEMA"            => "00",
+      "TABLE"             => "01",
+      "TABLE CONSTRAINT"  => "02",
+      "DEFAULT VALUE"     => "03",
+      "INDEX"             => "05",
+      "SEQUENCE"          => "06",
+      "TRIGGER"           => "07",
+      "FUNCTION"          => "08",
+      "VIEW"              => "10",
+      "MATERIALIZED VIEW" => "11",
+      "FOREIGN TABLE"     => "12"
+    }.freeze
+
     include PgDiff::Utils
 
     def initialize(connection)
@@ -45,9 +90,7 @@ module PgDiff
             , 16384 AS min_oid -- user objects only
             , '^(londiste|pgq|pg_toast|pg_catalog)'::text AS schema_exclusion
             , '^pg_(conversion|language|ts_(dict|template))'::text AS class_exclusion
-            , '{"SCHEMA":"00", "TABLE":"01", "TABLE CONSTRAINT":"02", "DEFAULT VALUE":"03",
-                "INDEX":"05", "SEQUENCE":"06", "TRIGGER":"07", "FUNCTION":"08",
-                "VIEW":"10", "MATERIALIZED VIEW":"11", "FOREIGN TABLE":"12"}'::json AS type_sort_orders
+            , '#{CLASSES.to_json}'::json AS type_sort_orders
         )
         , dependency_pair AS (
             SELECT objid

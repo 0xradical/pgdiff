@@ -26,7 +26,15 @@ module PgDiff
         usename
       end
 
-      def id
+      def world_type
+        "VIEW PRIVILEGE"
+      end
+
+      def world_id
+        name
+      end
+
+      def to_s
         "VIEW PRIVILEGE #{user} #{operations.join(", ")}"
       end
 

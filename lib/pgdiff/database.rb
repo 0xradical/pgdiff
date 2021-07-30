@@ -29,8 +29,36 @@ module PgDiff
     end
 
     def setup
-      @deps ||= PgDiff::Deps.new(@pg)
+      @deps    ||= PgDiff::Deps.new(@pg)
       @catalog ||= PgDiff::Catalog.new(@pg)
+
+      report_to_world
+      feedback_into_catalog
+    end
+
+    def report_to_world
+      @deps.flat_tree.each do |object|
+        PgDiff::World["#{object['object_type']}:#{object['object_identity']}"] = {
+          "id" => object["objid"],
+          "chain" => object['dependency_chain'][/\{(.*)\}/,1].split(",")[0..-2],
+          "type" => object["dependency_type"]
+        }
+      end
+    end
+
+    def feedback_into_catalog
+      binding.pry
+      # first pass, assign everyone an id from world
+      @catalog.each do |object|
+        PgDiff::World[object.world_id]["model"] = object
+        object.id = PgDiff::World[object.world_id]
+      end
+      # second pass, assign dependencies based on pgdiff::world
+      @catalog.each do |object|
+        object.dependencies = PgDiff::World[object.world_id].chain.map do |dep_id|
+          PgDiff::World[dep_id]["model"]
+        end
+      end
     end
   end
 end

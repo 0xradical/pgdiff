@@ -12,10 +12,14 @@ module PgDiff
         "#{seq_nspname}.#{seq_name}"
       end
 
-      def id
+      def world_type
+        "SEQUENCE"
+      end
+
+      def to_s
         %Q{
           SEQUENCE #{name}
-          #{privileges.map(&:id).join("\n") if privileges.length > 0}
+          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
         }
       end
 

@@ -16,7 +16,11 @@ module PgDiff
         indexdef
       end
 
-      def id
+      def world_type
+        "INDEX"
+      end
+
+      def to_s
         "TABLE INDEX #{indexdef}"
       end
 

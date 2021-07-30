@@ -12,7 +12,15 @@ module PgDiff
         relhasoids == 't'
       end
 
-      def id
+      def world_type
+        "TABLE OPTION"
+      end
+
+      def world_id
+        name
+      end
+
+      def to_s
         "TABLE OPTION #{has_oid? ? 'HAS OID' : 'DOES NOT HAVE OID'}"
       end
     end

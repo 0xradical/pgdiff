@@ -5,8 +5,12 @@ module PgDiff
         "#{schema}.#{@data['name']}"
       end
 
-      def id
+      def to_s
         "EXTENSION #{name}"
+      end
+
+      def world_type
+        "EXTENSION"
       end
 
       def add

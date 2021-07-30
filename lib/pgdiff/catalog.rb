@@ -99,7 +99,7 @@ module PgDiff
 
     def query_schemas
       query(%Q{
-        SELECT nspname FROM pg_namespace
+        SELECT nspname, (pg_identify_object('pg_namespace'::regclass, oid, 0)).identity FROM pg_namespace
           WHERE nspname NOT IN ('pg_catalog','information_schema')
           AND nspname NOT LIKE 'pg_toast%'
           AND nspname NOT LIKE 'pg_temp%'
@@ -113,7 +113,8 @@ module PgDiff
         nspname as schema,
         extname as name,
         extversion as version,
-        e.oid as oid
+        e.oid as oid,
+        (pg_identify_object('pg_extension'::regclass, e.oid, 0)).identity
       from
           pg_extension e
           INNER JOIN pg_namespace
@@ -124,7 +125,8 @@ module PgDiff
 
     def query_tables(schemas = self.query_schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT schemaname, tablename, tableowner
+        SELECT schemaname, tablename, tableowner,
+        (pg_identify_object('pg_class'::regclass, c.oid, 0)).identity
         FROM pg_tables t
         INNER JOIN pg_namespace n ON t.schemaname = n.nspname
                 INNER JOIN pg_class c ON t.tablename = c.relname AND c.relnamespace = n."oid"
@@ -176,7 +178,8 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT conname, contype, pg_get_constraintdef(c.oid) as definition
+        SELECT conname, contype, pg_get_constraintdef(c.oid) as definition,
+        (pg_identify_object('pg_constraint'::regclass, c.oid, 0)).identity
         FROM pg_constraint c
         INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
                 INNER JOIN pg_class cl ON cl.relname ='#{table}' AND cl.relnamespace = n.oid
@@ -188,7 +191,8 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT idx.relname as indexname, pg_get_indexdef(idx.oid) AS indexdef
+        SELECT idx.relname as indexname, pg_get_indexdef(idx.oid) AS indexdef,
+        (pg_identify_object('pg_class'::regclass,idx.oid, 0)).identity
         FROM pg_index i
         INNER JOIN pg_class tbl ON tbl.oid = i.indrelid
         INNER JOIN pg_namespace tbln ON tbl.relnamespace = tbln.oid
@@ -216,7 +220,8 @@ module PgDiff
 
     def query_views(schemas = self.query_schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT schemaname, viewname, viewowner, definition
+        SELECT schemaname, viewname, viewowner, definition,
+        (pg_identify_object('pg_class'::regclass, c.oid, 0)).identity
         FROM pg_views v
         INNER JOIN pg_namespace n ON v.schemaname = n.nspname
         INNER JOIN pg_class c ON v.viewname = c.relname AND c.relnamespace = n."oid"
@@ -248,8 +253,12 @@ module PgDiff
 
     def query_materialized_views(schemas = self.query_schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT schemaname, matviewname AS viewname, matviewowner AS viewowner, definition
-        FROM pg_matviews WHERE schemaname IN ('#{schemas.join("','")}');
+        SELECT schemaname, matviewname AS viewname, matviewowner AS viewowner, definition,
+        (pg_identify_object('pg_class'::regclass, c.oid, 0)).identity
+        FROM pg_matviews v
+        INNER JOIN pg_namespace n ON v.schemaname = n.nspname
+        INNER JOIN pg_class c ON v.matviewname = c.relname AND c.relnamespace = n."oid"
+        WHERE v.schemaname IN ('#{schemas.join("','")}');
       })
     end
 
@@ -291,7 +300,8 @@ module PgDiff
 
     def query_functions(schemas = self.query_schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes
+        SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes,
+        (pg_identify_object('pg_proc'::regclass, p.oid, 0)).identity
         FROM pg_proc p
         INNER JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname IN ('#{schemas.join("','")}') AND p.probin IS NULL AND p.prokind = 'f' AND p."oid" NOT IN (
@@ -348,7 +358,8 @@ module PgDiff
           ]
           , E',\\n'
           )
-        ) as definition
+        ) as definition,
+        (pg_identify_object('pg_proc'::regclass, p.oid, 0)).identity
                 FROM pg_proc p
         INNER JOIN pg_namespace n ON n.oid = p.pronamespace
         INNER JOIN pg_aggregate a on p.oid = a.aggfnoid
@@ -380,7 +391,8 @@ module PgDiff
       query(%Q{
         SELECT seq_nspname, seq_name, owner, ownedby_table, ownedby_column,
               p.start_value, p.minimum_value, p.maximum_value, p.increment,
-              p.cycle_option, p.cache_size
+              p.cycle_option, p.cache_size,
+              (pg_identify_object('pg_class'::regclass, s.oid, 0)).identity
                     FROM (
                         SELECT
                             c.oid, ns.nspname AS seq_nspname, c.relname AS seq_name, r.rolname as owner, sc.relname AS ownedby_table, a.attname AS ownedby_column
@@ -428,7 +440,8 @@ module PgDiff
               FROM pg_catalog.pg_enum e
               WHERE e.enumtypid = t.oid
               ORDER BY e.enumsortorder
-          ) AS elements
+          ) AS elements,
+          (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity
         FROM pg_catalog.pg_type t
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
             LEFT OUTER JOIN extension_oids e
@@ -459,7 +472,8 @@ module PgDiff
               (SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type bt
                 WHERE c.oid = t.typcollation AND bt.oid = t.typbasetype AND t.typcollation <> bt.typcollation) as "collation",
               t.typnotnull as "not_null",
-              t.typdefault as "default"
+              t.typdefault as "default",
+              (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity
         FROM pg_catalog.pg_type t
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname IN ('#{schemas.join("','")}')
@@ -485,7 +499,8 @@ module PgDiff
               d.classid = 'pg_type'::regclass
         )
         SELECT rr.conname as "constraint_name",
-              pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition"
+              pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition",
+              (pg_identify_object('pg_constraint'::regclass, rr.oid, 0)).identity
         FROM pg_catalog.pg_type t
           LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
           LEFT JOIN pg_catalog.pg_constraint rr on t.oid = rr.contypid
@@ -514,11 +529,14 @@ module PgDiff
             tg.tgname "name",
             nsp.nspname "schema",
             cls.relname table_name,
+            cls.relnamespace table_schema,
             pg_get_triggerdef(tg.oid) full_definition,
             proc.proname proc_name,
             nspp.nspname proc_schema,
+            oidvectortypes(proc.proargtypes) proc_argtypes,
             tg.tgenabled enabled,
-            tg.oid in (select * from extension_oids) as extension_owned
+            tg.oid in (select * from extension_oids) as extension_owned,
+            (pg_identify_object('pg_trigger'::regclass, tg.oid, 0)).identity
         from pg_trigger tg
         join pg_class cls on cls.oid = tg.tgrelid
         join pg_namespace nsp on nsp.oid = cls.relnamespace
