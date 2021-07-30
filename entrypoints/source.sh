@@ -36,12 +36,27 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
   CREATE TABLE app.user_accounts (
     id                      bigserial    PRIMARY KEY,
+    username                app.username NOT NULL,
+    short_bio                varchar     CONSTRAINT short_bio__length CHECK (LENGTH(short_bio) <= 60),
     email                   varchar      DEFAULT ''::varchar NOT NULL,
     encrypted_password      varchar      DEFAULT ''::varchar NOT NULL,
     preferences             json         DEFAULT '{}'::json,
     login_attempts          integer      DEFAULT 0           NOT NULL,
     created_at              timestamptz  DEFAULT NOW()       NOT NULL,
     updated_at              timestamptz  DEFAULT NOW()       NOT NULL
+  );
+
+  CREATE TABLE app.reviews (
+    id                uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+    reviewer_id       bigint REFERENCES app.user_accounts(id) ON DELETE CASCADE,
+    rating            numeric(1,0),
+    completed         boolean DEFAULT false,
+    state             varchar NOT NULL DEFAULT 'pending',
+    created_at        timestamptz  DEFAULT NOW() NOT NULL,
+    updated_at        timestamptz  DEFAULT NOW() NOT NULL,
+    CONSTRAINT rating__greater_than CHECK (rating >= 1),
+    CONSTRAINT rating__less_than CHECK (rating <= 5),
+    CONSTRAINT state__inclusion CHECK (state IN ('pending','accessed','submitted'))
   );
 
   CREATE OR REPLACE VIEW api.user_accounts AS (
@@ -52,6 +67,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     // a comment inside the function
     return 42;
   \$\$ LANGUAGE plv8;
+
+  -- public function
+  CREATE OR REPLACE FUNCTION answer_to_everything() RETURNS TEXT AS \$\$
+  DECLARE
+    domain app.domain;
+  BEGIN
+    -- a comment inside a function
+  PERFORM funcs.answer_to_life();
+  END;
+  \$\$ LANGUAGE PLPGSQL;
 
   CREATE OR REPLACE FUNCTION api.user_account_instead_of_insert() RETURNS trigger AS \$\$
     var user = plv8.execute(`

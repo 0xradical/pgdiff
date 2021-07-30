@@ -1,7 +1,10 @@
 require_relative "catalog.rb"
+require_relative "deps.rb"
 
 module PgDiff
   class Database
+    attr_reader :catalog, :deps
+
     def initialize(label, dbparams = {})
       @label = label
       @retries = 0
@@ -24,9 +27,12 @@ module PgDiff
           @retries += 1
         end
       end
+
+      setup
     end
 
-    def catalog
+    def setup
+      @deps ||= PgDiff::Deps.new(@pg)
       @catalog ||= PgDiff::Catalog.new(@pg)
     end
   end

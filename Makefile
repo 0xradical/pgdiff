@@ -9,8 +9,8 @@ up:
 down:
 	@docker-compose down
 
-console:
-	@bundle exec pry -r ./test/pgdiff.rb
+console: up
+	@bundle exec pry -r ./lib/pgdiff.rb -r ./bin/console.rb
 
 test: up
 	@bundle exec rake test

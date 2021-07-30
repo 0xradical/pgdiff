@@ -1,5 +1,9 @@
+require_relative "utils.rb"
+
 module PgDiff
   class Catalog
+    include PgDiff::Utils
+
     def initialize(connection)
       @connection = connection
     end
@@ -176,7 +180,7 @@ module PgDiff
                     FROM pg_depend d
                     WHERE d.deptype = 'e'
                 );
-      })
+      }).map
     end
 
     def aggregates(schemas = self.schemas.map{|row| row["nspname"] })
@@ -404,16 +408,6 @@ module PgDiff
               AND nsp.nspname IN ('#{schemas.join("','")}')
         order by schema, table_name, name;
       })
-    end
-
-    private
-
-    def exec(query)
-      @connection.exec(query).entries
-    end
-
-    def schema_and_table(table)
-      table =~ /\./ ? table.split(".") : ["public", table]
     end
   end
 end
