@@ -53,7 +53,15 @@ module PgDiff
       end
 
       def id
-        "TABLE COLUMN #{name} #{type} #{not_null ? 'NOT NULL' : ''} #{default_value ? 'DEFAULT ' + default_value : ''}"
+        "TABLE COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}"
+      end
+
+      def change
+        %Q{ALTER TABLE #{table.name} ADD COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''};}
+      end
+
+      def add
+        %Q{#{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}}
       end
     end
   end

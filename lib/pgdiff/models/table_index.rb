@@ -19,6 +19,10 @@ module PgDiff
       def id
         "TABLE INDEX #{indexdef}"
       end
+
+      def add
+        indexdef
+      end
     end
   end
 end

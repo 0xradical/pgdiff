@@ -34,7 +34,7 @@ module PgDiff
         end
       end + query_materialized_views.map do |data|
         Models::View.new(data, true).tap do |view|
-          view.add_privileges(query_view_privileges(view.name))
+          view.add_privileges(query_materialized_view_privileges(view.name))
         end
       end
       @functions = query_functions.map do |data|
@@ -65,9 +65,9 @@ module PgDiff
       @extensions.each { |o| yield o }
       @enums.each { |o| yield o }
       @domains.each { |o| yield o }
-      # @aggregates.each { |o| yield o }
-      # @tables.each { |o| yield o }
-      # @views.each { |o| yield o }
+      @aggregates.each { |o| yield o }
+      @tables.each { |o| yield o }
+      @views.each { |o| yield o }
       # @functions.each { |o| yield o }
       # @sequences.each { |o| yield o }
     end
@@ -82,6 +82,12 @@ module PgDiff
         enums.map(&:name).include?(object.name)
       when "PgDiff::Models::Domain"
         domains.map(&:name).include?(object.name)
+      when "PgDiff::Models::Aggregate"
+        aggregates.map(&:name).include?(object.name)
+      when "PgDiff::Models::Table"
+        tables.map(&:name).include?(object.name)
+      when "PgDiff::Models::View"
+        views.map(&:name).include?(object.name)
       else
         false
       end
@@ -240,6 +246,23 @@ module PgDiff
       query(%Q{
         SELECT schemaname, matviewname AS viewname, matviewowner AS viewowner, definition
         FROM pg_matviews WHERE schemaname IN ('#{schemas.join("','")}');
+      })
+    end
+
+    def query_materialized_view_privileges(view_name)
+      schema, view = schema_and_table(view_name)
+
+      query(%Q{
+        SELECT v.schemaname, v.matviewname as viewname, u.usename,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'SELECT') as select,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'INSERT') as insert,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'UPDATE') as update,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'DELETE') as delete,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRUNCATE') as truncate,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'REFERENCES') as references,
+        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRIGGER') as trigger
+        FROM pg_matviews v, pg_user u
+        WHERE v.schemaname = '#{schema}' and v.matviewname='#{view}';
       })
     end
 

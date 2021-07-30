@@ -60,6 +60,27 @@ module PgDiff
           @privileges << Models::TablePrivilege.new(c, self)
         end
       end
+
+      def add
+        %Q{CREATE TABLE #{name} (\n} +
+        [
+          columns.map do |column|
+            column.add
+          end,
+          constraints.map do |constraint|
+            constraint.add
+          end
+        ].flatten.join(",\n") +
+        %Q{);\n\n} +
+        indexes.map do |index|
+          index.add
+        end.join("\n") +
+        "\n" +
+        privileges.map do |privilege|
+          privilege.add
+        end.join("\n") +
+        "\n"
+      end
     end
   end
 end

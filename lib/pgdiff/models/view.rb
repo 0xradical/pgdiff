@@ -29,6 +29,16 @@ module PgDiff
           @privileges << Models::ViewPrivilege.new(p, self)
         end
       end
+
+      def add
+        %Q{CREATE #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name} AS (\n} +
+        %Q{#{definition}} +
+        %Q{\n);} +
+        "\n" +
+        privileges.map do |privilege|
+          privilege.add
+        end.join("\n")
+      end
     end
   end
 end

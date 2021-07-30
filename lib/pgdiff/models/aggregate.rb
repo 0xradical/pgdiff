@@ -11,6 +11,12 @@ module PgDiff
           #{definition}
         }
       end
+
+      def add
+        %Q{CREATE AGGREGATE #{name} (#{argtypes})\n(\n} +
+        %Q{#{definition}} +
+        %Q{\n);}
+      end
     end
   end
 end
