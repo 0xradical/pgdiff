@@ -1,12 +1,12 @@
 module PgDiff
   module Models
-    class Enum < Base
+    class Extension < Base
       def name
         "#{schema}.#{@data['name']}"
       end
 
       def id
-        "ENUM #{name} #{elements}"
+        "EXTENSION #{name}"
       end
     end
   end

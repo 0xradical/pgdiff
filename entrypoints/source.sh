@@ -28,7 +28,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
   CREATE DOMAIN app.username AS CITEXT;
 
-  CREATE TYPE app.api_key_status AS ENUM (
+  CREATE TYPE app.user_status AS ENUM (
     'enabled',
     'disabled',
     'blacklisted'
@@ -41,7 +41,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     email                   varchar      DEFAULT ''::varchar NOT NULL,
     encrypted_password      varchar      DEFAULT ''::varchar NOT NULL,
     preferences             json         DEFAULT '{}'::json,
-    enabled                 boolean      DEFAULT 't',
+    status                  app.user_status      DEFAULT 'enabled'::app.user_status,
     login_attempts          integer      DEFAULT 0           NOT NULL,
     created_at              timestamptz  DEFAULT NOW()       NOT NULL,
     updated_at              timestamptz  DEFAULT NOW()       NOT NULL
@@ -50,7 +50,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   CREATE UNIQUE INDEX index_user_accounts_username
     ON app.user_accounts
     USING btree (username)
-    WHERE enabled = 't';
+    WHERE status = 'enabled'::app.user_status;
 
   CREATE TABLE app.reviews (
     id                uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,

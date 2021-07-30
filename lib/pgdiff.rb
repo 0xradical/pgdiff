@@ -4,6 +4,8 @@ module PgDiff; end
 
 require_relative "pgdiff/utils.rb"
 require_relative "pgdiff/models/base.rb"
+require_relative "pgdiff/models/extension.rb"
+require_relative "pgdiff/models/aggregate.rb"
 require_relative "pgdiff/models/function_privilege.rb"
 require_relative "pgdiff/models/function.rb"
 require_relative "pgdiff/models/table_column.rb"
@@ -23,3 +25,8 @@ require_relative "pgdiff/models/domain.rb"
 require_relative "pgdiff/catalog.rb"
 require_relative "pgdiff/deps.rb"
 require_relative "pgdiff/database.rb"
+require_relative "pgdiff/diff.rb"
+
+def PgDiff.compare(source, target)
+  source.extensions.each do |extension|
+end

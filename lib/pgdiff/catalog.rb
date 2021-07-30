@@ -4,7 +4,7 @@ module PgDiff
 
     attr_reader :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums
+                :domains, :enums, :extensions
 
     def initialize(connection)
       @connection = connection
@@ -14,6 +14,9 @@ module PgDiff
     def collect!
       @schemas = query_schemas.map do |data|
         Models::Schema.new(data)
+      end
+      @extensions = query_extensions.map do |data|
+        Models::Extension.new(data)
       end
       @tables = query_tables.map do |data|
         Models::Table.new(data).tap do |table|
@@ -38,6 +41,17 @@ module PgDiff
           function.add_privileges(query_function_privileges(function.name, function.argtypes))
         end
       end
+      @aggregates = query_aggregates.map do |data|
+        Models::Aggregate.new(data)
+      end
+      @sequences = query_sequences.map do |data|
+        Models::Sequence.new(data).tap do |sequence|
+          sequence.add_privileges(query_sequence_privileges(sequence.name))
+        end
+      end
+      @enums = query_enums.map do |data|
+        Models::Enum.new(data)
+      end
       @domains = query_domains.map do |data|
         Models::Domain.new(data).tap do |domain|
           domain.add_constraints(query_domain_constraints(domain.name))
@@ -52,6 +66,21 @@ module PgDiff
           AND nspname NOT LIKE 'pg_toast%'
           AND nspname NOT LIKE 'pg_temp%'
           AND nspname <> 'pgdiff';
+      })
+    end
+
+    def query_extensions
+      query(%Q{
+        select
+        nspname as schema,
+        extname as name,
+        extversion as version,
+        e.oid as oid
+      from
+          pg_extension e
+          INNER JOIN pg_namespace
+              ON pg_namespace.oid=e.extnamespace
+      order by schema, name;
       })
     end
 
