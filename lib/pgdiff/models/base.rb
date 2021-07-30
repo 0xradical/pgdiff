@@ -1,6 +1,11 @@
 module PgDiff
   module Models
     class Base
+      # objid from pg_depend
+      attr_accessor :id
+      attr_accessor :dependencies
+      attr_accessor :dependency_type
+
       def initialize(data)
         @data = data
       end
@@ -28,15 +33,6 @@ module PgDiff
       # type from pg_identify_object
       def world_type
         raise "Not Implemented Error"
-      end
-
-      # objid from pg_depend
-      def id
-        raise "Not Implemented Error"
-      end
-
-      def dependencies
-        Pg::Diff::World[world_id] || []
       end
 
       def method_missing(m, *a, &b)

@@ -38,7 +38,11 @@ module PgDiff
 
     def report_to_world
       @deps.flat_tree.each do |object|
-        PgDiff::World["#{object['object_type']}:#{object['object_identity']}"] = {
+        id = "#{object['object_type']}|#{object['object_identity']}"
+
+        PgDiff::World::IDS[object["objid"]] = id
+
+        PgDiff::World::OBJECTS[id] = {
           "id" => object["objid"],
           "chain" => object['dependency_chain'][/\{(.*)\}/,1].split(",")[0..-2],
           "type" => object["dependency_type"]
@@ -47,18 +51,33 @@ module PgDiff
     end
 
     def feedback_into_catalog
-      binding.pry
       # first pass, assign everyone an id from world
       @catalog.each do |object|
-        PgDiff::World[object.world_id]["model"] = object
-        object.id = PgDiff::World[object.world_id]
+        id = "#{object.world_type}|#{object.world_id}"
+        if PgDiff::World::OBJECTS[id]
+          PgDiff::World::OBJECTS[id]["model"] = object
+          object.id = PgDiff::World::OBJECTS[id]["id"]
+        end
       end
       # second pass, assign dependencies based on pgdiff::world
       @catalog.each do |object|
-        object.dependencies = PgDiff::World[object.world_id].chain.map do |dep_id|
-          PgDiff::World[dep_id]["model"]
+        id = "#{object.world_type}|#{object.world_id}"
+
+        if PgDiff::World::OBJECTS[id]
+          if PgDiff::World::OBJECTS[id]["chain"].length > 0
+            object.dependency_type = PgDiff::World::OBJECTS[id]["type"]
+            object.dependencies = PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
+              PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
+            end
+          else
+            object.dependency_type = "none"
+            object.dependencies = []
+          end
         end
       end
+
+      PgDiff::World::OBJECTS.clear
+      PgDiff::World::IDS.clear
     end
   end
 end

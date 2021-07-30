@@ -5,7 +5,7 @@ module PgDiff
 
     attr_reader :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums, :extensions
+                :domains, :enums, :extensions, :triggers
 
     def initialize(connection)
       @connection = connection
@@ -58,18 +58,42 @@ module PgDiff
           domain.add_constraints(query_domain_constraints(domain.name))
         end
       end
+      @triggers = query_triggers.map do |data|
+        Models::Trigger.new(data)
+      end
     end
 
+    # every object
     def each
       @schemas.each { |o| yield o }
       @extensions.each { |o| yield o }
       @enums.each { |o| yield o }
-      @domains.each { |o| yield o }
+      @domains.each do |o|
+        yield o
+        o.constraints.each { |oo| yield oo }
+      end
       @aggregates.each { |o| yield o }
-      @tables.each { |o| yield o }
-      @views.each { |o| yield o }
-      @functions.each { |o| yield o }
-      @sequences.each { |o| yield o }
+      @tables.each do |o|
+        yield o
+        o.columns.each { |oo| yield oo }
+        o.constraints.each { |oo| yield oo }
+        o.indexes.each { |oo| yield oo }
+        o.options.each { |oo| yield oo }
+        o.privileges.each { |oo| yield oo }
+      end
+      @views.each do |o|
+        yield o
+        o.privileges { |oo| yield oo }
+      end
+      @functions.each do |o|
+        yield o
+        o.privileges {|oo| yield oo }
+      end
+      @sequences.each do |o|
+        yield o
+        o.privileges {|oo| yield oo }
+      end
+      @triggers.each {|o| yield o }
     end
 
     def include?(object)
