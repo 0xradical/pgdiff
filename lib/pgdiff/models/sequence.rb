@@ -24,6 +24,19 @@ module PgDiff
           @privileges << Models::SequencePrivilege.new(p, self)
         end
       end
+
+      def add
+        %Q{CREATE SEQUENCE IF NOT EXISTS #{name}
+  INCREMENT BY #{increment}
+  MINVALUE #{minimum_value}
+  MAXVALUE #{maximum_value}
+  START #{start_value}
+  CACHE #{cache_size} #{cycle_option == "f" ? 'NOCYCLE' : 'CYCLE'};\n
+        } +
+        privileges.map do |privilege|
+          privilege.add
+        end.join("\n")
+      end
     end
   end
 end

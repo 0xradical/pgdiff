@@ -30,6 +30,13 @@ module PgDiff
            }
         }
       end
+
+      def add
+        %Q{#{definition};\n} +
+        privileges.map do |privilege|
+          privilege.add
+        end.join("\n")
+      end
     end
   end
 end

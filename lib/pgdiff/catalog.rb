@@ -68,8 +68,8 @@ module PgDiff
       @aggregates.each { |o| yield o }
       @tables.each { |o| yield o }
       @views.each { |o| yield o }
-      # @functions.each { |o| yield o }
-      # @sequences.each { |o| yield o }
+      @functions.each { |o| yield o }
+      @sequences.each { |o| yield o }
     end
 
     def include?(object)
@@ -88,6 +88,10 @@ module PgDiff
         tables.map(&:name).include?(object.name)
       when "PgDiff::Models::View"
         views.map(&:name).include?(object.name)
+      when "PgDiff::Models::Function"
+        functions.map(&:name).include?(object.name)
+      when "PgDiff::Models::Sequence"
+        sequences.map(&:name).include?(object.name)
       else
         false
       end

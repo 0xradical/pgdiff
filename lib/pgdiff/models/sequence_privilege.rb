@@ -1,6 +1,12 @@
 module PgDiff
   module Models
     class SequencePrivilege < Base
+      OPERATIONS = [
+        "select",
+        "usage",
+        "update"
+      ].freeze
+
       attr_reader :sequence
 
       def initialize(data, sequence)
@@ -20,12 +26,17 @@ module PgDiff
         "SEQUENCE PRIVILEGE #{user} #{operations.join(", ")}"
       end
 
+      def add
+        %Q{REVOKE ALL PRIVILEGES ON #{name} FROM "#{user}";\n} +
+        OPERATIONS.map do |op|
+          if @data[op] == "t"
+            %Q{GRANT #{op.upcase} ON #{name} TO "#{user}";}
+          end
+        end.compact.join("\n")
+      end
+
       def operations
-        [
-          "select",
-          "usage",
-          "update"
-        ].map do |op|
+        OPERATIONS.map do |op|
           @data[op] == "t" ? "CAN #{op.upcase} ON #{name}" : "CANNOT #{op.upcase} ON #{name}"
         end
       end
