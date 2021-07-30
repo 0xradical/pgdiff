@@ -1,11 +1,31 @@
-require_relative "utils.rb"
-
 module PgDiff
   class Catalog
     include PgDiff::Utils
 
     def initialize(connection)
       @connection = connection
+    end
+
+    def collect!
+      @schemas = schemas.map do |data|
+        Models::Schema.new(data)
+      end
+      @tables = tables.map do |data|
+        Models::Table.new(data).tap do |table|
+          table.add_columns(table.name)
+          table.add_constraints(table.name)
+        end
+      end
+      @functions = functions.map do |data|
+        Models::Function.new(data).tap do |function|
+          function.add_privileges(function_privileges(function.name, function.argtypes))
+        end
+      end
+      @domains = domains.map do |data|
+        Models::Domain.new(data).tap do |domain|
+          domain.add_constraints(domain_constraints(domain.name))
+        end
+      end
     end
 
     def schemas
@@ -180,7 +200,7 @@ module PgDiff
                     FROM pg_depend d
                     WHERE d.deptype = 'e'
                 );
-      }).map
+      })
     end
 
     def aggregates(schemas = self.schemas.map{|row| row["nspname"] })
@@ -372,6 +392,7 @@ module PgDiff
           LEFT JOIN pg_catalog.pg_constraint rr on t.oid = rr.contypid
         WHERE n.nspname = '#{schema}' AND t.typname = '#{domain}'
           AND t.typtype = 'd'
+          AND rr.conname IS NOT NULL
           AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
           AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
           AND t.oid not in (select * from extension_oids)

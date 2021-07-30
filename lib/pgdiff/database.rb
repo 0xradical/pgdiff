@@ -1,6 +1,3 @@
-require_relative "catalog.rb"
-require_relative "deps.rb"
-
 module PgDiff
   class Database
     attr_reader :catalog, :deps

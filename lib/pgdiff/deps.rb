@@ -1,5 +1,3 @@
-require_relative "utils.rb"
-
 # From https://wiki.postgresql.org/wiki/Pg_depend_display
 # /**** Usage Examples ****
 # -- Examine the entire object hierarchy
