@@ -198,6 +198,19 @@ AS $function$
 ",
     "owner"=>"postgres",
     "argtypes"=>""
+    },{
+      "proname"=>"user_account_instead_of_insert",
+      "nspname"=>"api",
+      "definition"=>"CREATE OR REPLACE FUNCTION api.user_account_instead_of_insert()
+ RETURNS trigger
+ LANGUAGE plv8
+AS $function$
+    var user = plv8.execute()[0];
+    return user;
+  $function$
+",
+      "owner"=>"postgres",
+      "argtypes"=>""
     }]
   end
 
@@ -311,6 +324,19 @@ AS $function$
     assert_equal @source.catalog.domain_constraints("app.domain"), [{
       "constraint_name"=>"domain__must_be_a_domain",
       "definition"=>"CHECK (VALUE ~ '^([a-z0-9\\-\\_]+\\.)+[a-z]+$'::citext)"
+    }]
+  end
+
+  def test_triggers
+    assert_equal @source.catalog.triggers, [{
+      "name"=>"api_user_account_instead_of_insert",
+      "schema"=>"api",
+      "table_name"=>"user_accounts",
+      "full_definition"=>"CREATE TRIGGER api_user_account_instead_of_insert INSTEAD OF INSERT ON api.user_accounts FOR EACH ROW EXECUTE PROCEDURE api.user_account_instead_of_insert()",
+      "proc_name"=>"user_account_instead_of_insert",
+      "proc_schema"=>"api",
+      "enabled"=>"O",
+      "extension_owned"=>"f"
     }]
   end
 end

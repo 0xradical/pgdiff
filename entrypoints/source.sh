@@ -52,4 +52,17 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     // a comment inside the function
     return 42;
   \$\$ LANGUAGE plv8;
+
+  CREATE OR REPLACE FUNCTION api.user_account_instead_of_insert() RETURNS trigger AS \$\$
+    var user = plv8.execute(`
+      INSERT INTO app.user_accounts (email) VALUES ('\${NEW.email}') RETURNING *;
+    `)[0];
+    return user;
+  \$\$ LANGUAGE plv8;
+
+  CREATE TRIGGER api_user_account_instead_of_insert
+    INSTEAD OF INSERT
+    ON api.user_accounts
+    FOR EACH ROW
+      EXECUTE PROCEDURE api.user_account_instead_of_insert();
 EOSQL

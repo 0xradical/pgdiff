@@ -375,6 +375,37 @@ module PgDiff
       })
     end
 
+    def triggers(schemas = self.schemas.map{|row| row["nspname"] })
+      exec(%Q{
+        with extension_oids as (
+          select
+              objid
+          from
+              pg_depend d
+          WHERE
+             d.refclassid = 'pg_extension'::regclass and
+             d.classid = 'pg_trigger'::regclass
+        )
+        select
+            tg.tgname "name",
+            nsp.nspname "schema",
+            cls.relname table_name,
+            pg_get_triggerdef(tg.oid) full_definition,
+            proc.proname proc_name,
+            nspp.nspname proc_schema,
+            tg.tgenabled enabled,
+            tg.oid in (select * from extension_oids) as extension_owned
+        from pg_trigger tg
+        join pg_class cls on cls.oid = tg.tgrelid
+        join pg_namespace nsp on nsp.oid = cls.relnamespace
+        join pg_proc proc on proc.oid = tg.tgfoid
+        join pg_namespace nspp on nspp.oid = proc.pronamespace
+        where not tg.tgisinternal
+              AND nsp.nspname IN ('#{schemas.join("','")}')
+        order by schema, table_name, name;
+      })
+    end
+
     private
 
     def exec(query)
