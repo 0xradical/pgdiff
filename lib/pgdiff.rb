@@ -28,5 +28,19 @@ require_relative "pgdiff/database.rb"
 require_relative "pgdiff/diff.rb"
 
 def PgDiff.compare(source, target)
-  source.extensions.each do |extension|
+  diff = PgDiff::Diff.new
+
+  source.catalog.each do |object|
+    if !target.catalog.include?(object)
+      diff.add(object)
+    end
+  end
+
+  target.catalog.each do |object|
+    if !source.catalog.include?(object)
+      diff.drop(object)
+    end
+  end
+
+  diff.operations
 end

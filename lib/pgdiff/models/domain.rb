@@ -18,10 +18,6 @@ module PgDiff
         end
       end
 
-      def type
-        "TYPE"
-      end
-
       def id
         %Q{
           DOMAIN #{name} AS #{data_type} #{'NOT NULL' if not_null == 't'} #{'DEFAULT ' + default if default}
@@ -29,6 +25,13 @@ module PgDiff
             constraints.map(&:id).join("\n") if constraints.length > 0
           }
         }
+      end
+
+      def add
+        %Q{CREATE DOMAIN "#{name}" AS #{data_type};\n} +
+        constraints.map do |constraint|
+          %Q{ALTER DOMAIN "#{name}" ADD constraint #{constraint.constraint_name} #{constraint.definition};}
+        end.join("\n")
       end
     end
   end

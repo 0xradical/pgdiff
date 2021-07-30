@@ -1,6 +1,7 @@
 module PgDiff
   class Catalog
     include PgDiff::Utils
+    include Enumerable
 
     attr_reader :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
@@ -56,6 +57,33 @@ module PgDiff
         Models::Domain.new(data).tap do |domain|
           domain.add_constraints(query_domain_constraints(domain.name))
         end
+      end
+    end
+
+    def each
+      @schemas.each { |o| yield o }
+      @extensions.each { |o| yield o }
+      @enums.each { |o| yield o }
+      @domains.each { |o| yield o }
+      # @aggregates.each { |o| yield o }
+      # @tables.each { |o| yield o }
+      # @views.each { |o| yield o }
+      # @functions.each { |o| yield o }
+      # @sequences.each { |o| yield o }
+    end
+
+    def include?(object)
+      case object.class.name
+      when "PgDiff::Models::Schema"
+        schemas.map(&:name).include?(object.name)
+      when "PgDiff::Models::Extension"
+        extensions.map(&:name).include?(object.name)
+      when "PgDiff::Models::Enum"
+        enums.map(&:name).include?(object.name)
+      when "PgDiff::Models::Domain"
+        domains.map(&:name).include?(object.name)
+      else
+        false
       end
     end
 

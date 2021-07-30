@@ -8,6 +8,14 @@ module PgDiff
       def id
         "ENUM #{name} #{elements}"
       end
+
+      def add
+        %Q{CREATE TYPE "#{name}" AS ENUM (\n} +
+        elements[/\{(.*)\}/,1].split(/\s*,\s*/).map{|e| "'#{e}'"}.map do |element|
+          " #{element}"
+        end.join(",\n") +
+        %Q{\n);}
+      end
     end
   end
 end

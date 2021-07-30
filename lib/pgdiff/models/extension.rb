@@ -8,6 +8,14 @@ module PgDiff
       def id
         "EXTENSION #{name}"
       end
+
+      def add
+        %Q{CREATE EXTENSION IF NOT EXISTS "#{@data['name']}" WITH SCHEMA #{schema};}
+      end
+
+      def drop
+        %Q{DROP EXTENSION "#{@data['name']}";}
+      end
     end
   end
 end
