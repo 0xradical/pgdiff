@@ -12,8 +12,8 @@ module PgDiff
       end
       @tables = tables.map do |data|
         Models::Table.new(data).tap do |table|
-          table.add_columns(table.name)
-          table.add_constraints(table.name)
+          table.add_columns(table_columns(table.name))
+          table.add_constraints(table_constraints(table.name))
         end
       end
       @functions = functions.map do |data|
@@ -26,12 +26,16 @@ module PgDiff
           domain.add_constraints(domain_constraints(domain.name))
         end
       end
+      {
+        "schemas": @schemas,
+        "tables": @tables,
+        "functions": @functions,
+        "domains": @domains
+      }
     end
 
     def schemas
-      return @schemas if @schemas
-
-      @schemas = exec(%Q{
+      exec(%Q{
         SELECT nspname FROM pg_namespace
 					WHERE nspname NOT IN ('pg_catalog','information_schema')
 					AND nspname NOT LIKE 'pg_toast%'
@@ -40,9 +44,7 @@ module PgDiff
     end
 
     def tables(schemas = self.schemas.map{|row| row["nspname"] })
-      return @tables if @tables
-
-      @tables = exec(%Q{
+      exec(%Q{
         SELECT schemaname, tablename, tableowner
 				FROM pg_tables t
 				INNER JOIN pg_namespace n ON t.schemaname = n.nspname
@@ -70,7 +72,7 @@ module PgDiff
     def table_columns(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{SELECT a.attname, a.attnotnull, t.typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
+      exec(%Q{SELECT a.attname, a.attnotnull, tn.nspname, t.typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
                   CASE
                       WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
                       WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
@@ -83,6 +85,7 @@ module PgDiff
                   FROM pg_attribute a
                   INNER JOIN pg_type t ON t.oid = a.atttypid
           LEFT JOIN pg_attrdef ad on ad.adrelid = a.attrelid AND a.attnum = ad.adnum
+          LEFT JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
           INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
           INNER JOIN pg_class c ON c.relname = '#{table}' AND c.relnamespace = n."oid"
                   WHERE attrelid = c."oid" AND attnum > 0 AND attisdropped = false
