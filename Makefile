@@ -14,3 +14,9 @@ console:
 
 test: up
 	@bundle exec rake test
+
+psql-source:
+	@PGPASSWORD=postgres psql -U postgres -h 0.0.0.0 -p 54532 -d pgdiff
+
+psql-target:
+	@PGPASSWORD=postgres psql -U postgres -h 0.0.0.0 -p 54533 -d pgdiff

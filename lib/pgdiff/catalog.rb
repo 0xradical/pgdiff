@@ -241,7 +241,7 @@ module PgDiff
       })
     end
 
-    def function_privileges(function_name, arg_types)
+    def function_privileges(function_name, arg_types = "")
       schema, function = schema_and_table(function_name)
 
       exec(%Q{
@@ -277,12 +277,101 @@ module PgDiff
       schema, sequence = schema_and_table(sequence_name)
 
       exec(%Q{
-        SELECT s.sequence_schema, s.sequence_name, u.usename, NULL AS cache_value
+        SELECT s.sequence_schema, s.sequence_name, u.usename, NULL AS cache_value,
                     HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'SELECT') as select,
                     HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'USAGE') as usage,
                     HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'UPDATE') as update
                     FROM information_schema.sequences s, pg_user u
                     WHERE s.sequence_schema = '#{schema}' and s.sequence_name='#{sequence}';
+      })
+    end
+
+    def enums(schemas = self.schemas.map{|row| row["nspname"] })
+      exec(%Q{
+        WITH extension_oids AS (
+          SELECT
+              objid
+          FROM
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass AND
+              d.classid = 'pg_type'::regclass
+        )
+        SELECT
+          n.nspname AS "schema",
+          t.typname AS "name",
+          ARRAY(
+             SELECT e.enumlabel
+              FROM pg_catalog.pg_enum e
+              WHERE e.enumtypid = t.oid
+              ORDER BY e.enumsortorder
+          ) AS elements
+        FROM pg_catalog.pg_type t
+             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+             LEFT OUTER JOIN extension_oids e
+               ON t.oid = e.objid
+        WHERE
+          t.typtype = 'e'
+          AND e.objid IS NULL
+          AND n.nspname IN ('#{schemas.join("','")}')
+        ORDER BY 1, 2;
+      })
+    end
+
+    def domains(schemas = self.schemas.map{|row| row["nspname"] })
+      exec(%Q{
+        WITH extension_oids AS (
+          SELECT
+              objid
+          FROM
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass AND
+              d.classid = 'pg_type'::regclass
+        )
+        SELECT n.nspname as "schema",
+               t.typname as "name",
+               pg_catalog.format_type(t.typbasetype, t.typtypmod) as "data_type",
+               (CASE t.typtype WHEN 'd' THEN 'domain' WHEN 'e' THEN 'enum' ELSE NULL END) AS "type",
+               (SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type bt
+                WHERE c.oid = t.typcollation AND bt.oid = t.typbasetype AND t.typcollation <> bt.typcollation) as "collation",
+               t.typnotnull as "not_null",
+               t.typdefault as "default"
+        FROM pg_catalog.pg_type t
+             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname IN ('#{schemas.join("','")}')
+             AND t.typtype = 'd'
+             AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
+             AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
+             AND t.oid not in (select * from extension_oids)
+        ORDER BY 1, 2;
+      })
+    end
+
+    def domain_constraints(domain_name)
+      schema, domain = schema_and_table(domain_name)
+
+      exec(%Q{
+        WITH extension_oids AS (
+          SELECT
+              objid
+          FROM
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass AND
+              d.classid = 'pg_type'::regclass
+        )
+        SELECT rr.conname as "constraint_name",
+               pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition"
+        FROM pg_catalog.pg_type t
+          LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+          LEFT JOIN pg_catalog.pg_constraint rr on t.oid = rr.contypid
+        WHERE n.nspname = '#{schema}' AND t.typname = '#{domain}'
+          AND t.typtype = 'd'
+          AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
+          AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
+          AND t.oid not in (select * from extension_oids)
+        ORDER BY 1, 2;
       })
     end
 

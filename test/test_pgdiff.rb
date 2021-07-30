@@ -9,7 +9,7 @@ class TestPgDiff < Minitest::Test
   end
 
   def test_schemas
-    assert_equal @source.catalog.schemas.map{|h| h["nspname"] }.sort, ["app", "public"]
+    assert_equal @source.catalog.schemas.map{|h| h["nspname"] }.sort, ["api", "app", "funcs", "public"]
   end
   def test_tables
     assert_equal @source.catalog.tables, [
@@ -101,33 +101,216 @@ class TestPgDiff < Minitest::Test
     }]
   end
   def test_table_privileges
-    assert_equal @source.catalog.table_privileges("app.user_accounts"), []
+    assert_equal @source.catalog.table_privileges("app.user_accounts"), [{
+      "schemaname"=>"app",
+      "tablename"=>"user_accounts",
+      "usename"=>"postgres",
+      "select"=>"t",
+      "insert"=>"t",
+      "update"=>"t",
+      "delete"=>"t",
+      "truncate"=>"t",
+      "references"=>"t",
+      "trigger"=>"t"
+    }, {
+      "schemaname"=>"app",
+      "tablename"=>"user_accounts",
+      "usename"=>"admin",
+      "select"=>"f",
+      "insert"=>"f",
+      "update"=>"f",
+      "delete"=>"f",
+      "truncate"=>"f",
+      "references"=>"f",
+      "trigger"=>"f"
+      }, {
+      "schemaname"=>"app",
+      "tablename"=>"user_accounts",
+      "usename"=>"user",
+      "select"=>"f",
+      "insert"=>"f",
+      "update"=>"f",
+      "delete"=>"f",
+      "truncate"=>"f",
+      "references"=>"f",
+      "trigger"=>"f"
+    }]
   end
   def test_views
-    assert_equal @source.catalog.views, []
+    assert_equal @source.catalog.views,  [{
+      "schemaname"=>"api",
+      "viewname"=>"user_accounts",
+      "viewowner"=>"postgres",
+      "definition"=>
+        " SELECT user_accounts.id,\n    user_accounts.email,\n    user_accounts.encrypted_password,\n    user_accounts.preferences,\n    user_accounts.login_attempts,\n    user_accounts.created_at,\n    user_accounts.updated_at\n   FROM app.user_accounts\n  WHERE (user_accounts.created_at >= '2020-01-01 00:00:00+00'::timestamp with time zone);"
+    }]
   end
+
   def test_view_privileges
-    assert_equal @source.catalog.view_privileges, []
-    # assert_empty @source.catalog.functions
+    assert_equal @source.catalog.view_privileges("api.user_accounts"), [{
+      "schemaname"=>"api",
+      "viewname"=>"user_accounts",
+      "usename"=>"postgres",
+      "select"=>"t",
+      "insert"=>"t",
+      "update"=>"t",
+      "delete"=>"t",
+      "truncate"=>"t",
+      "references"=>"t",
+      "trigger"=>"t"
+    }, {
+      "schemaname"=>"api",
+       "viewname"=>"user_accounts",
+       "usename"=>"admin",
+       "select"=>"f",
+       "insert"=>"f",
+       "update"=>"f",
+       "delete"=>"f",
+       "truncate"=>"f",
+       "references"=>"f",
+       "trigger"=>"f"
+    }, {
+      "schemaname"=>"api",
+      "viewname"=>"user_accounts",
+      "usename"=>"user",
+      "select"=>"f",
+      "insert"=>"f",
+      "update"=>"f",
+      "delete"=>"f",
+      "truncate"=>"f",
+      "references"=>"f",
+      "trigger"=>"f"
+    }]
+  end
+
+  def test_functions
+    assert_equal @source.catalog.functions, [{
+      "proname"=>"answer_to_life",
+      "nspname"=>"funcs",
+      "definition"=>
+      "CREATE OR REPLACE FUNCTION funcs.answer_to_life()
+ RETURNS text
+ LANGUAGE plv8
+AS $function$
+    // a comment inside the function
+    return 42;
+  $function$
+",
+    "owner"=>"postgres",
+    "argtypes"=>""
+    }]
+  end
+
+  def test_aggregates
+    assert_equal @source.catalog.aggregates, [{
+      "proname"=>"array_accum",
+      "nspname"=>"public",
+      "owner"=>"postgres",
+      "argtypes"=>"anyarray",
+      "definition"=>
+      "\tSFUNC = array_cat,
+\tSTYPE = anyarray,
+\tSSPACE = 0,
+\tINITCOND = {},
+\tPARALLEL = UNSAFE"
+    }]
+  end
+
+  def test_function_privileges
+    assert_equal @source.catalog.function_privileges("funcs.answer_to_life", ""), [{
+      "pronamespace"=>"funcs",
+      "proname"=>"answer_to_life",
+      "usename"=>"postgres",
+      "execute"=>"t"
+    }, {
+      "pronamespace"=>"funcs",
+      "proname"=>"answer_to_life",
+      "usename"=>"admin",
+      "execute"=>"t"
+    }, {
+      "pronamespace"=>"funcs",
+      "proname"=>"answer_to_life",
+      "usename"=>"user",
+      "execute"=>"t"
+    }]
+  end
+
+  def test_sequences
+    assert_equal @source.catalog.sequences, [{
+      "seq_nspname"=>"app",
+      "seq_name"=>"user_accounts_id_seq",
+      "owner"=>"postgres",
+      "ownedby_table"=>"user_accounts",
+      "ownedby_column"=>"id",
+      "start_value"=>"1",
+      "minimum_value"=>"1",
+      "maximum_value"=>"9223372036854775807",
+      "increment"=>"1",
+      "cycle_option"=>"f",
+      "cache_size"=>"1"
+    }]
+  end
+
+  def test_sequence_privileges
+    assert_equal @source.catalog.sequence_privileges("app.user_accounts_id_seq"), [{
+      "sequence_schema"=>"app",
+      "sequence_name"=>"user_accounts_id_seq",
+      "usename"=>"postgres",
+      "cache_value"=>nil,
+      "select"=>"t",
+      "usage"=>"t",
+      "update"=>"t"
+    }, {
+      "sequence_schema"=>"app",
+      "sequence_name"=>"user_accounts_id_seq",
+      "usename"=>"admin",
+      "cache_value"=>nil,
+      "select"=>"f",
+      "usage"=>"f",
+      "update"=>"f"
+    }, {
+      "sequence_schema"=>"app",
+      "sequence_name"=>"user_accounts_id_seq",
+      "usename"=>"user",
+      "cache_value"=>nil,
+      "select"=>"f",
+      "usage"=>"f",
+      "update"=>"f"
+    }]
+  end
+
+  def test_enums
+    assert_equal @source.catalog.enums, [{
+      "schema"=>"app",
+      "name"=>"api_key_status",
+      "elements"=>"{enabled,disabled,blacklisted}"
+    }]
+  end
+
+  def test_domains
+    assert_equal @source.catalog.domains, [{
+      "schema"=>"app",
+      "name"=>"domain",
+      "data_type"=>"citext",
+      "type"=>"domain",
+      "collation"=>nil,
+      "not_null"=>"f",
+      "default"=>nil
+    }, {
+      "schema"=>"app",
+      "name"=>"username",
+      "data_type"=>"citext",
+      "type"=>"domain",
+      "collation"=>nil,
+      "not_null"=>"f",
+      "default"=>nil
+    }]
+  end
+
+  def test_domain_constraints
+    assert_equal @source.catalog.domain_constraints("app.domain"), [{
+      "constraint_name"=>"domain__must_be_a_domain",
+      "definition"=>"CHECK (VALUE ~ '^([a-z0-9\\-\\_]+\\.)+[a-z]+$'::citext)"
+    }]
   end
 end
-
-
-
-
-  # def schemas
-  # def tables(schemas = self.schemas.map{|row| row["nspname"] })
-  # def table_options(table_name)
-  # def table_columns(table_name)
-  # def table_constraints(table_name)
-  # def table_indexes(table_name)
-  # def table_privileges(table_name)
-  # def views(schemas = self.schemas.map{|row| row["nspname"] })
-  # def view_privileges(view_name)
-  # def materialized_views(schemas = self.schemas.map{|row| row["nspname"] })
-  # def view_dependencies(view_name)
-  # def functions(schemas = self.schemas.map{|row| row["nspname"] })
-  # def aggregates(schemas = self.schemas.map{|row| row["nspname"] })
-  # def function_privileges(function_name, arg_types)
-  # def sequences(schemas = self.schemas.map{|row| row["nspname"] })
-  # def sequence_privileges(sequence_name)

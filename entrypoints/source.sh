@@ -3,6 +3,8 @@ set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
   CREATE SCHEMA IF NOT EXISTS "app";
+  CREATE SCHEMA IF NOT EXISTS "api";
+  CREATE SCHEMA IF NOT EXISTS "funcs";
 
   CREATE EXTENSION IF NOT EXISTS citext      WITH SCHEMA public;
   CREATE EXTENSION IF NOT EXISTS plpgsql     WITH SCHEMA pg_catalog;
@@ -43,6 +45,11 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   );
 
   CREATE OR REPLACE VIEW api.user_accounts AS (
-    SELECT * FROM app.user_accounts WHERE created_at >= '2020-01-01';
+    SELECT * FROM app.user_accounts WHERE created_at >= '2020-01-01'
   );
+
+  CREATE OR REPLACE FUNCTION funcs.answer_to_life() RETURNS TEXT AS \$\$
+    // a comment inside the function
+    return 42;
+  \$\$ LANGUAGE plv8;
 EOSQL
