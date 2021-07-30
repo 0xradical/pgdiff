@@ -551,10 +551,10 @@ module PgDiff
         )
         select
             tg.tgname "name",
-            nsp.nspname "schema",
+            nspp.nspname "schema",
             cls.relname table_name,
-            cls.relnamespace table_schema,
-            pg_get_triggerdef(tg.oid) full_definition,
+            nsp.nspname table_schema,
+            pg_get_triggerdef(tg.oid) definition,
             proc.proname proc_name,
             nspp.nspname proc_schema,
             oidvectortypes(proc.proargtypes) proc_argtypes,
