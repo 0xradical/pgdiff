@@ -3,7 +3,7 @@ module PgDiff
     class TableConstraint < Base
       attr_reader :table
 
-      def initialize(data, domain)
+      def initialize(data, table)
         super(data)
         @table = table
       end
@@ -30,7 +30,7 @@ module PgDiff
       end
 
       def id
-        "CONSTRAINT #{name} #{type} #{definition}"
+        "TABLE CONSTRAINT #{name} #{type} #{definition}"
       end
     end
   end

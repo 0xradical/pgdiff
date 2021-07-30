@@ -2,52 +2,64 @@ module PgDiff
   class Catalog
     include PgDiff::Utils
 
+    attr_reader :schemas, :tables, :views,
+                :functions, :aggregates, :sequences,
+                :domains, :enums
+
     def initialize(connection)
       @connection = connection
+      collect!
     end
 
     def collect!
-      @schemas = schemas.map do |data|
+      @schemas = query_schemas.map do |data|
         Models::Schema.new(data)
       end
-      @tables = tables.map do |data|
+      @tables = query_tables.map do |data|
         Models::Table.new(data).tap do |table|
-          table.add_columns(table_columns(table.name))
-          table.add_constraints(table_constraints(table.name))
+          table.add_columns(query_table_columns(table.name))
+          table.add_constraints(query_table_constraints(table.name))
+          table.add_indexes(query_table_indexes(table.name))
+          table.add_options(query_table_options(table.name))
+          table.add_privileges(query_table_privileges(table.name))
         end
       end
-      @functions = functions.map do |data|
+      @views = query_views.map do |data|
+        Models::View.new(data, false).tap do |view|
+          view.add_privileges(query_view_privileges(view.name))
+        end
+      end + query_materialized_views.map do |data|
+        Models::View.new(data, true).tap do |view|
+          view.add_privileges(query_view_privileges(view.name))
+        end
+      end
+      @functions = query_functions.map do |data|
         Models::Function.new(data).tap do |function|
-          function.add_privileges(function_privileges(function.name, function.argtypes))
+          function.add_privileges(query_function_privileges(function.name, function.argtypes))
         end
       end
-      @domains = domains.map do |data|
+      @domains = query_domains.map do |data|
         Models::Domain.new(data).tap do |domain|
-          domain.add_constraints(domain_constraints(domain.name))
+          domain.add_constraints(query_domain_constraints(domain.name))
         end
       end
-      {
-        "schemas": @schemas,
-        "tables": @tables,
-        "functions": @functions,
-        "domains": @domains
-      }
     end
 
-    def schemas
-      exec(%Q{
+    def query_schemas
+      query(%Q{
         SELECT nspname FROM pg_namespace
-					WHERE nspname NOT IN ('pg_catalog','information_schema')
-					AND nspname NOT LIKE 'pg_toast%'
-					AND nspname NOT LIKE 'pg_temp%';
+          WHERE nspname NOT IN ('pg_catalog','information_schema')
+          AND nspname NOT LIKE 'pg_toast%'
+          AND nspname NOT LIKE 'pg_temp%'
+          AND nspname <> 'pgdiff';
       })
     end
 
-    def tables(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_tables(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         SELECT schemaname, tablename, tableowner
-				FROM pg_tables t
-				INNER JOIN pg_namespace n ON t.schemaname = n.nspname
+        FROM pg_tables t
+        INNER JOIN pg_namespace n ON t.schemaname = n.nspname
                 INNER JOIN pg_class c ON t.tablename = c.relname AND c.relnamespace = n."oid"
                 WHERE t.schemaname IN ('#{schemas.join("','")}')
                 AND c.oid NOT IN (
@@ -58,21 +70,21 @@ module PgDiff
       })
     end
 
-    def table_options(table_name)
+    def query_table_options(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT relhasoids
-				FROM pg_class c
-				INNER JOIN pg_namespace n ON n."oid" = c.relnamespace AND n.nspname = '#{schema}'
-				WHERE c.relname = '#{table}';
+        FROM pg_class c
+        INNER JOIN pg_namespace n ON n."oid" = c.relnamespace AND n.nspname = '#{schema}'
+        WHERE c.relname = '#{table}';
       })
     end
 
-    def table_columns(table_name)
+    def query_table_columns(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{SELECT a.attname, a.attnotnull, tn.nspname, t.typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
+      query(%Q{SELECT a.attname, a.attnotnull, tn.nspname, t.typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
                   CASE
                       WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
                       WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
@@ -93,22 +105,22 @@ module PgDiff
       });
     end
 
-    def table_constraints(table_name)
+    def query_table_constraints(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT conname, contype, pg_get_constraintdef(c.oid) as definition
-				FROM pg_constraint c
-				INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
+        FROM pg_constraint c
+        INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
                 INNER JOIN pg_class cl ON cl.relname ='#{table}' AND cl.relnamespace = n.oid
-				WHERE c.conrelid = cl.oid;
+        WHERE c.conrelid = cl.oid;
       })
     end
 
-    def table_indexes(table_name)
+    def query_table_indexes(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT idx.relname as indexname, pg_get_indexdef(idx.oid) AS indexdef
         FROM pg_index i
         INNER JOIN pg_class tbl ON tbl.oid = i.indrelid
@@ -118,10 +130,10 @@ module PgDiff
       })
     end
 
-    def table_privileges(table_name)
+    def query_table_privileges(table_name)
       schema, table = schema_and_table(table_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT t.schemaname, t.tablename, u.usename,
         HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'SELECT') as select,
         HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'INSERT') as insert,
@@ -135,8 +147,8 @@ module PgDiff
       })
     end
 
-    def views(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_views(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         SELECT schemaname, viewname, viewowner, definition
         FROM pg_views v
         INNER JOIN pg_namespace n ON v.schemaname = n.nspname
@@ -150,10 +162,10 @@ module PgDiff
       })
     end
 
-    def view_privileges(view_name)
+    def query_view_privileges(view_name)
       schema, view = schema_and_table(view_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT v.schemaname, v.viewname, u.usename,
         HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'SELECT') as select,
         HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'INSERT') as insert,
@@ -167,17 +179,17 @@ module PgDiff
       })
     end
 
-    def materialized_views(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
-        SELECT schemaname, matviewname, matviewowner, definition
+    def query_materialized_views(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
+        SELECT schemaname, matviewname AS viewname, matviewowner AS viewowner, definition
         FROM pg_matviews WHERE schemaname IN ('#{schemas.join("','")}');
       })
     end
 
-    def view_dependencies(view_name)
+    def query_view_dependencies(view_name)
       schema, view = schema_and_table(view_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT
         n.nspname AS schemaname,
         c.relname AS tablename,
@@ -193,8 +205,8 @@ module PgDiff
       })
     end
 
-    def functions(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_functions(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes
         FROM pg_proc p
         INNER JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -206,8 +218,8 @@ module PgDiff
       })
     end
 
-    def aggregates(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_aggregates(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         SELECT p.proname, n.nspname, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes,
         format('%s', array_to_string(
           ARRAY[
@@ -218,9 +230,9 @@ module PgDiff
             , CASE WHEN a.aggfinalfn != '-'::regproc AND a.aggfinalextra = true THEN format(E'\\tFINALFUNC_EXTRA') ELSE NULL END
             , CASE WHEN a.aggfinalfn != '-'::regproc THEN format(E'\\tFINALFUNC_MODIFY = %s',
               CASE
-                 WHEN a.aggfinalmodify = 'r' THEN 'READ_ONLY'
-                 WHEN a.aggfinalmodify = 's' THEN 'SHAREABLE'
-                 WHEN a.aggfinalmodify = 'w' THEN 'READ_WRITE'
+                WHEN a.aggfinalmodify = 'r' THEN 'READ_ONLY'
+                WHEN a.aggfinalmodify = 's' THEN 'SHAREABLE'
+                WHEN a.aggfinalmodify = 'w' THEN 'READ_WRITE'
               END
             ) ELSE NULL END
             , CASE WHEN a.agginitval IS NULL THEN NULL ELSE format(E'\\tINITCOND = %s', a.agginitval) END
@@ -246,7 +258,7 @@ module PgDiff
                 WHEN a.aggmfinalmodify = 's' THEN 'SHAREABLE'
                 WHEN a.aggmfinalmodify = 'w' THEN 'READ_WRITE'
               END
-             ) ELSE NULL END
+            ) ELSE NULL END
             , CASE WHEN a.aggminitval IS NULL THEN NULL ELSE format(E'\\tMINITCOND = %s', a.aggminitval) END
             , CASE a.aggsortop WHEN 0 THEN NULL ELSE format(E'\\tSORTOP = %s', o.oprname) END
           ]
@@ -268,10 +280,10 @@ module PgDiff
       })
     end
 
-    def function_privileges(function_name, arg_types = "")
+    def query_function_privileges(function_name, arg_types = "")
       schema, function = schema_and_table(function_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT n.nspname as pronamespace, p.proname, u.usename,
         HAS_FUNCTION_PRIVILEGE(u.usename,'"#{schema}"."#{function}"(#{arg_types})','EXECUTE') as execute
         FROM pg_proc p, pg_user u
@@ -280,11 +292,11 @@ module PgDiff
       })
     end
 
-    def sequences(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_sequences(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         SELECT seq_nspname, seq_name, owner, ownedby_table, ownedby_column,
-               p.start_value, p.minimum_value, p.maximum_value, p.increment,
-               p.cycle_option, p.cache_size
+              p.start_value, p.minimum_value, p.maximum_value, p.increment,
+              p.cycle_option, p.cache_size
                     FROM (
                         SELECT
                             c.oid, ns.nspname AS seq_nspname, c.relname AS seq_name, r.rolname as owner, sc.relname AS ownedby_table, a.attname AS ownedby_column
@@ -300,10 +312,10 @@ module PgDiff
       })
     end
 
-    def sequence_privileges(sequence_name)
+    def query_sequence_privileges(sequence_name)
       schema, sequence = schema_and_table(sequence_name)
 
-      exec(%Q{
+      query(%Q{
         SELECT s.sequence_schema, s.sequence_name, u.usename, NULL AS cache_value,
                     HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'SELECT') as select,
                     HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'USAGE') as usage,
@@ -313,8 +325,8 @@ module PgDiff
       })
     end
 
-    def enums(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_enums(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         WITH extension_oids AS (
           SELECT
               objid
@@ -328,15 +340,15 @@ module PgDiff
           n.nspname AS "schema",
           t.typname AS "name",
           ARRAY(
-             SELECT e.enumlabel
+            SELECT e.enumlabel
               FROM pg_catalog.pg_enum e
               WHERE e.enumtypid = t.oid
               ORDER BY e.enumsortorder
           ) AS elements
         FROM pg_catalog.pg_type t
-             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-             LEFT OUTER JOIN extension_oids e
-               ON t.oid = e.objid
+            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+            LEFT OUTER JOIN extension_oids e
+              ON t.oid = e.objid
         WHERE
           t.typtype = 'e'
           AND e.objid IS NULL
@@ -345,8 +357,8 @@ module PgDiff
       })
     end
 
-    def domains(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_domains(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         WITH extension_oids AS (
           SELECT
               objid
@@ -357,28 +369,28 @@ module PgDiff
               d.classid = 'pg_type'::regclass
         )
         SELECT n.nspname as "schema",
-               t.typname as "name",
-               pg_catalog.format_type(t.typbasetype, t.typtypmod) as "data_type",
-               (CASE t.typtype WHEN 'd' THEN 'domain' WHEN 'e' THEN 'enum' ELSE NULL END) AS "type",
-               (SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type bt
+              t.typname as "name",
+              pg_catalog.format_type(t.typbasetype, t.typtypmod) as "data_type",
+              (CASE t.typtype WHEN 'd' THEN 'domain' WHEN 'e' THEN 'enum' ELSE NULL END) AS "type",
+              (SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type bt
                 WHERE c.oid = t.typcollation AND bt.oid = t.typbasetype AND t.typcollation <> bt.typcollation) as "collation",
-               t.typnotnull as "not_null",
-               t.typdefault as "default"
+              t.typnotnull as "not_null",
+              t.typdefault as "default"
         FROM pg_catalog.pg_type t
-             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname IN ('#{schemas.join("','")}')
-             AND t.typtype = 'd'
-             AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
-             AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
-             AND t.oid not in (select * from extension_oids)
+            AND t.typtype = 'd'
+            AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
+            AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
+            AND t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
     end
 
-    def domain_constraints(domain_name)
+    def query_domain_constraints(domain_name)
       schema, domain = schema_and_table(domain_name)
 
-      exec(%Q{
+      query(%Q{
         WITH extension_oids AS (
           SELECT
               objid
@@ -389,7 +401,7 @@ module PgDiff
               d.classid = 'pg_type'::regclass
         )
         SELECT rr.conname as "constraint_name",
-               pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition"
+              pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition"
         FROM pg_catalog.pg_type t
           LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
           LEFT JOIN pg_catalog.pg_constraint rr on t.oid = rr.contypid
@@ -403,16 +415,16 @@ module PgDiff
       })
     end
 
-    def triggers(schemas = self.schemas.map{|row| row["nspname"] })
-      exec(%Q{
+    def query_triggers(schemas = self.query_schemas.map{|row| row["nspname"] })
+      query(%Q{
         with extension_oids as (
           select
               objid
           from
               pg_depend d
           WHERE
-             d.refclassid = 'pg_extension'::regclass and
-             d.classid = 'pg_trigger'::regclass
+            d.refclassid = 'pg_extension'::regclass and
+            d.classid = 'pg_trigger'::regclass
         )
         select
             tg.tgname "name",

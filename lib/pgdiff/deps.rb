@@ -36,12 +36,12 @@ module PgDiff
     end
 
     def setup
-      exec(%{
+      query(%{
         CREATE SCHEMA IF NOT EXISTS pgdiff;
 
         CREATE OR REPLACE VIEW pgdiff.dependency AS
         WITH RECURSIVE preference AS (
-          SELECT 1 AS max_depth
+          SELECT 10 AS max_depth
             , 16384 AS min_oid -- user objects only
             , '^(londiste|pgq|pg_toast|pg_catalog)'::text AS schema_exclusion
             , '^pg_(conversion|language|ts_(dict|template))'::text AS class_exclusion
@@ -210,9 +210,15 @@ module PgDiff
               })
     end
 
+    def flat_tree
+      query(%Q{
+        SELECT * FROM pgdiff.dependency;
+      })
+    end
+
     def tree(args = "''")
       generate_tree(
-        exec(%Q{
+        query(%Q{
           SELECT pgdiff.dependency_tree(#{args});
         })
       )

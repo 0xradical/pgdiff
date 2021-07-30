@@ -1,9 +1,6 @@
 module PgDiff
   module Models
-    class Type < Base
-      def id
-
-      end
+    class Aggregate < Base
     end
   end
 end

@@ -6,7 +6,7 @@ module PgDiff
       end
 
       def id
-        nspname
+        "SCHEMA #{nspname}"
       end
     end
   end

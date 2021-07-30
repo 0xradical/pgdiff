@@ -1,7 +1,7 @@
 module PgDiff
   module Utils
-    def exec(query)
-      @connection.exec(query).entries
+    def query(q)
+      @connection.exec(q).entries
     end
 
     def schema_and_table(table)

@@ -3,7 +3,7 @@ module PgDiff
     class TableColumn < Base
       attr_reader :table
 
-      def initialize(data, domain)
+      def initialize(data, table)
         super(data)
         @table = table
       end
@@ -53,7 +53,7 @@ module PgDiff
       end
 
       def id
-        "COLUMN #{name} #{type} #{not_null ? 'NOT NULL' : ''} #{default_value ? 'DEFAULT ' + default_value : ''}"
+        "TABLE COLUMN #{name} #{type} #{not_null ? 'NOT NULL' : ''} #{default_value ? 'DEFAULT ' + default_value : ''}"
       end
     end
   end

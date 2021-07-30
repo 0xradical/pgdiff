@@ -9,7 +9,7 @@ module PgDiff
       end
 
       def id
-        "CONSTRAINT #{constraint_name} #{definition}"
+        "DOMAIN CONSTRAINT #{constraint_name} #{definition}"
       end
     end
   end

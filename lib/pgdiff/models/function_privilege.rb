@@ -12,8 +12,12 @@ module PgDiff
         "#{pronamespace}.#{proname}"
       end
 
+      def user
+        usename
+      end
+
       def id
-        "#{usename} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}"
+        "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}"
       end
     end
   end

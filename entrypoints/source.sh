@@ -37,14 +37,20 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   CREATE TABLE app.user_accounts (
     id                      bigserial    PRIMARY KEY,
     username                app.username NOT NULL,
-    short_bio                varchar     CONSTRAINT short_bio__length CHECK (LENGTH(short_bio) <= 60),
+    short_bio               varchar     CONSTRAINT short_bio__length CHECK (LENGTH(short_bio) <= 60),
     email                   varchar      DEFAULT ''::varchar NOT NULL,
     encrypted_password      varchar      DEFAULT ''::varchar NOT NULL,
     preferences             json         DEFAULT '{}'::json,
+    enabled                 boolean      DEFAULT 't',
     login_attempts          integer      DEFAULT 0           NOT NULL,
     created_at              timestamptz  DEFAULT NOW()       NOT NULL,
     updated_at              timestamptz  DEFAULT NOW()       NOT NULL
   );
+
+  CREATE UNIQUE INDEX index_user_accounts_username
+    ON app.user_accounts
+    USING btree (username)
+    WHERE enabled = 't';
 
   CREATE TABLE app.reviews (
     id                uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
@@ -57,6 +63,11 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CONSTRAINT rating__greater_than CHECK (rating >= 1),
     CONSTRAINT rating__less_than CHECK (rating <= 5),
     CONSTRAINT state__inclusion CHECK (state IN ('pending','accessed','submitted'))
+  );
+
+  CREATE MATERIALIZED VIEW api.users_and_reviews AS (
+    SELECT app.user_accounts.id AS user_account_id, app.reviews.id AS review_id
+      FROM app.user_accounts LEFT JOIN app.reviews ON app.user_accounts.id = app.reviews.reviewer_id
   );
 
   CREATE OR REPLACE VIEW api.user_accounts AS (

@@ -24,7 +24,7 @@ module PgDiff
 
       def id
         %Q{
-          #{name}(#{argtypes})
+          FUNCTION #{name}(#{argtypes})
           #{
             privileges.map(&:id).join("\n") if privileges.length > 0
            }

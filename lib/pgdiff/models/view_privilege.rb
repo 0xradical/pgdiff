@@ -1,15 +1,15 @@
 module PgDiff
   module Models
-    class TablePrivilege < Base
-      attr_reader :table
+    class ViewPrivilege < Base
+      attr_reader :view
 
-      def initialize(data, table)
+      def initialize(data, view)
         super(data)
-        @table = table
+        @view = view
       end
 
       def name
-        "#{schemaname}.#{tablename}"
+        "#{schemaname}.#{viewname}"
       end
 
       def user
@@ -17,7 +17,7 @@ module PgDiff
       end
 
       def id
-        "TABLE PRIVILEGE #{user} #{operations.join(", ")}"
+        "VIEW PRIVILEGE #{user} #{operations.join(", ")}"
       end
 
       def operations
@@ -38,13 +38,13 @@ module PgDiff
 end
 
 
-# {"schemaname"=>"app",
-#   "tablename"=>"user_accounts",
-#   "usename"=>"admin",
-#   "select"=>"f",
-#   "insert"=>"f",
-#   "update"=>"f",
-#   "delete"=>"f",
-#   "truncate"=>"f",
-#   "references"=>"f",
-#   "trigger"=>"f"},
+# {"schemaname"=>"api",
+#   "viewname"=>"user_accounts",
+#   "usename"=>"postgres",
+#   "select"=>"t",
+#   "insert"=>"t",
+#   "update"=>"t",
+#   "delete"=>"t",
+#   "truncate"=>"t",
+#   "references"=>"t",
+#   "trigger"=>"t"}
