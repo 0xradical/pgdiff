@@ -16,6 +16,12 @@ module PgDiff
         "#{schema}.#{@data['name']}"
       end
 
+      def each
+        [ constraints ].each do |dependency|
+          dependency.each { |d| yield d }
+        end
+      end
+
       def add_constraints(data)
         data.each do |c|
           @constraints << Models::DomainConstraint.new(c, self)

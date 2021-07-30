@@ -31,6 +31,12 @@ module PgDiff
         }
       end
 
+      def each
+        [ privileges ].each do |dependency|
+          dependency.each { |d| yield d }
+        end
+      end
+
       def world_type
         "FUNCTION"
       end

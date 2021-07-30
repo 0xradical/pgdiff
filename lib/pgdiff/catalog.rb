@@ -63,37 +63,20 @@ module PgDiff
       end
     end
 
-    # every object
-    def each
-      @schemas.each { |o| yield o }
-      @extensions.each { |o| yield o }
-      @enums.each { |o| yield o }
-      @domains.each do |o|
-        yield o
-        o.constraints.each { |oo| yield oo }
+    # deep each (every object and its attributes)
+    def each_object(deep: true)
+      [
+        @schemas, @extensions, @enums,
+        @domains, @aggregates, @tables,
+        @views, @functions, @sequences, @triggers
+      ].each do |family|
+        family.each do |parent|
+          yield parent
+          if deep
+            parent.each { |child| yield child }
+          end
+        end
       end
-      @aggregates.each { |o| yield o }
-      @tables.each do |o|
-        yield o
-        o.columns.each { |oo| yield oo }
-        o.constraints.each { |oo| yield oo }
-        o.indexes.each { |oo| yield oo }
-        o.options.each { |oo| yield oo }
-        o.privileges.each { |oo| yield oo }
-      end
-      @views.each do |o|
-        yield o
-        o.privileges { |oo| yield oo }
-      end
-      @functions.each do |o|
-        yield o
-        o.privileges {|oo| yield oo }
-      end
-      @sequences.each do |o|
-        yield o
-        o.privileges {|oo| yield oo }
-      end
-      @triggers.each {|o| yield o }
     end
 
     def include?(object)

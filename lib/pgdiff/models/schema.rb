@@ -17,6 +17,7 @@ module PgDiff
         %Q{CREATE SCHEMA IF NOT EXISTS "#{nspname}";}
       end
 
+
       def drop
         %Q{DROP SCHEMA "#{nspname}";}
       end

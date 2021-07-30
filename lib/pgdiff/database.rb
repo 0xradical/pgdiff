@@ -52,7 +52,7 @@ module PgDiff
 
     def feedback_into_catalog
       # first pass, assign everyone an id from world
-      @catalog.each do |object|
+      @catalog.each_object(deep: true) do |object|
         id = "#{object.world_type}|#{object.world_id}"
         if PgDiff::World::OBJECTS[id]
           PgDiff::World::OBJECTS[id]["model"] = object
@@ -60,18 +60,18 @@ module PgDiff
         end
       end
       # second pass, assign dependencies based on pgdiff::world
-      @catalog.each do |object|
+      @catalog.each_object(deep: true) do |object|
         id = "#{object.world_type}|#{object.world_id}"
 
         if PgDiff::World::OBJECTS[id]
           if PgDiff::World::OBJECTS[id]["chain"].length > 0
             object.dependency_type = PgDiff::World::OBJECTS[id]["type"]
-            object.dependencies = PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
+            object.depend_on = PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
               PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
             end
           else
             object.dependency_type = "none"
-            object.dependencies = []
+            object.depend_on = []
           end
         end
       end

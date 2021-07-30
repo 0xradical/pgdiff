@@ -20,6 +20,10 @@ module PgDiff
         name
       end
 
+      def add
+        ""
+      end
+
       def to_s
         "TABLE OPTION #{has_oid? ? 'HAS OID' : 'DOES NOT HAVE OID'}"
       end

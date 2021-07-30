@@ -16,6 +16,12 @@ module PgDiff
         "SEQUENCE"
       end
 
+      def each
+        [ privileges ].each do |dependency|
+          dependency.each { |d| yield d }
+        end
+      end
+
       def to_s
         %Q{
           SEQUENCE #{name}
