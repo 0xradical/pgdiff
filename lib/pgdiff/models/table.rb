@@ -72,25 +72,34 @@ module PgDiff
         end
       end
 
-      def add
+      def add(diff)
+        columns.each{|c| diff.added[c] = true }
+        constraints.each{|c| diff.added[c] = true }
+        indexes.each{|c| diff.added[c] = true }
+        privileges.each{|c| diff.added[c] = true }
+
         %Q{CREATE TABLE #{name} (\n} +
         [
           columns.map do |column|
-            column.add
+            "    " + column.add(diff)
           end,
           constraints.map do |constraint|
-            constraint.add
+            "    " + constraint.add(diff)
           end
         ].flatten.join(",\n") +
-        %Q{);\n\n} +
+        %Q{\n);\n\n} +
         indexes.map do |index|
-          index.add
+          index.add(diff)
         end.join("\n") +
-        "\n" +
+        "\n\n" +
         privileges.map do |privilege|
-          privilege.add
+          privilege.add(diff)
         end.join("\n") +
         "\n"
+      end
+
+      def remove
+        %Q{DROP TABLE #{name};}
       end
     end
   end

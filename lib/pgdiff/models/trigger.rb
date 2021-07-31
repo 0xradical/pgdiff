@@ -9,7 +9,7 @@ module PgDiff
         %Q{TRIGGER #{name} ON #{table_schema}.#{table_name} TO EXECUTE #{proc_schema}.#{proc_name}(#{proc_argtypes})}
       end
 
-      def add
+      def add(diff)
         %Q{#{definition};\n}
       end
 

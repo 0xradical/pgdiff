@@ -29,7 +29,7 @@ module PgDiff
         "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}(#{argtypes})"
       end
 
-      def add
+      def add(diff)
         if execute == 't'
           %Q{GRANT EXECUTE ON #{name}(#{argtypes}) TO "#{user}";}
         else

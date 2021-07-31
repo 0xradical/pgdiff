@@ -1,9 +1,12 @@
 module PgDiff
   module World
-    # maps objid to model
-    IDS = Hash.new
-
+    extend self
     # maps object.identity to model
-    OBJECTS = Hash.new
+    OBJECTS      = Hash.new
+    DEPENDENCIES = Hash.new
+
+    def add_dependency(dependency)
+      DEPENDENCIES[dependency.hash] ||= dependency
+    end
   end
 end

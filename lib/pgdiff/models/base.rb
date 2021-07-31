@@ -3,37 +3,43 @@ module PgDiff
     class Base
       # objid from pg_depend
       attr_accessor :id
-      attr_accessor :depend_on
       attr_accessor :dependencies
-      attr_accessor :dependency_type
 
       def initialize(data)
         @data = data
-        @dependencies = Set.new
+        @dependencies = PgDiff::Dependencies.new(self)
+        # register itself into world
+        PgDiff::World::OBJECTS[id] = self
       end
 
       def to_s; @data; end
       def inspect; to_s; end
+      def id; objid; end
 
       def add_dependency(dependency)
         @dependencies.add(dependency)
       end
 
       def ==(other)
-        world_id == other.world_id &&
-        world_type == other.world_type
+        objid == other.objid
       end
 
-      def add
-        raise "Not Implemented In #{self.class.name} Error"
+      def add(diff)
+        "
+        -- Addition of #{self.class.name} not implemented
+        "
       end
 
-      def drop
-        raise "Not Implemented In #{self.class.name} Error"
+      def remove(diff)
+        "
+        -- Removal of #{self.class.name} not implemented
+        "
       end
 
-      def change(to)
-        raise "Not Implemented In #{self.class.name} Error"
+      def change(diff, from)
+        "
+        -- Changes to #{self.class.name} not implemented
+        "
       end
 
       # identity from pg_identify_object

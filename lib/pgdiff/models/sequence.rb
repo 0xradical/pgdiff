@@ -35,7 +35,7 @@ module PgDiff
         end
       end
 
-      def add
+      def add(diff)
         %Q{CREATE SEQUENCE IF NOT EXISTS #{name}
   INCREMENT BY #{increment}
   MINVALUE #{minimum_value}
@@ -44,7 +44,7 @@ module PgDiff
   CACHE #{cache_size} #{cycle_option == "f" ? 'NOCYCLE' : 'CYCLE'};\n
         } +
         privileges.map do |privilege|
-          privilege.add
+          privilege.add(diff)
         end.join("\n")
       end
     end

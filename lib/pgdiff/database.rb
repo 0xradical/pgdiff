@@ -1,6 +1,6 @@
 module PgDiff
   class Database
-    attr_reader :catalog, :deps
+    attr_reader :catalog, :dependencies
 
     def initialize(label, dbparams = {})
       @label = label
@@ -29,63 +29,29 @@ module PgDiff
     end
 
     def setup
-      @deps    ||= PgDiff::Deps.new(@pg)
       @catalog ||= PgDiff::Catalog.new(@pg)
 
-      report_to_world
-      feedback_into_catalog
-    end
+      PgDiff::Queries.new(@pg).dependency_pairs.each do |dep|
+        object = PgDiff::World::OBJECTS[dep["objid"]]
 
-    def report_to_world
-      @deps.flat_tree.each do |object|
-        id = "#{object['object_type']}|#{object['object_identity']}"
-        chain = Set.new(object['dependency_chain'][/\{(.*)\}/,1].split(",")[0..-2])
-
-        PgDiff::World::IDS[object["objid"]] = id
-
-        if (current = PgDiff::World::OBJECTS[id])
-          PgDiff::World::OBJECTS[id]["chain"] = chain | PgDiff::World::OBJECTS[id]["chain"]
-        else
-          PgDiff::World::OBJECTS[id] = {
-            "id" => object["objid"],
-            "chain" => chain,
-            "type" => object["dependency_type"]
-          }
+        if !object
+          object = PgDiff::Models::Unmapped.new(dep["objid"], dep["object_identity"], dep["object_type"])
         end
-      end
-    end
 
-    def feedback_into_catalog
-      # first pass, assign everyone an id from world
-      @catalog.each_object(deep: true) do |object|
-        id = "#{object.world_type}|#{object.world_id}"
-        if PgDiff::World::OBJECTS[id]
-          PgDiff::World::OBJECTS[id]["model"] = object
-          object.id = PgDiff::World::OBJECTS[id]["id"]
+        referenced = PgDiff::World::OBJECTS[dep["refobjid"]]
+
+        if !referenced
+          referenced = PgDiff::Models::Unmapped.new(dep["refobjid"], dep["refobj_identity"], dep["refobj_type"])
         end
-      end
-      # second pass, assign dependencies based on pgdiff::world
-      @catalog.each_object(deep: true) do |object|
-        id = "#{object.world_type}|#{object.world_id}"
-        if PgDiff::World::OBJECTS[id]
-          object.dependency_type = object["dependency_type"]
-          object.depend_on = Set.new(
-            PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
-              upstream_dependency = if PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
-                PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
-              else
-                name, world_type = PgDiff::World::IDS[dep_id].split("|")
-                PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"] = PgDiff::Models::Unmapped.new(name, world_type)
-              end
-              upstream_dependency.add_dependency(object)
-              upstream_dependency
-            end
+
+        PgDiff::World.add_dependency(
+          PgDiff::Dependency.new(
+            object,
+            referenced,
+            dep["dependency_type"]
           )
-        end
+        )
       end
-
-      PgDiff::World::OBJECTS.clear
-      PgDiff::World::IDS.clear
     end
   end
 end

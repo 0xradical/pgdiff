@@ -13,11 +13,11 @@ module PgDiff
         "EXTENSION"
       end
 
-      def add
+      def add(diff)
         %Q{CREATE EXTENSION IF NOT EXISTS "#{@data['name']}" WITH SCHEMA #{schema};}
       end
 
-      def drop
+      def remove
         %Q{DROP EXTENSION "#{@data['name']}";}
       end
     end

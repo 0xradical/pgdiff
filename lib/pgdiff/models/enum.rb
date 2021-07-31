@@ -13,17 +13,20 @@ module PgDiff
         "ENUM #{name} #{elements}"
       end
 
-      def change(object)
-        elements.each do |element|
+      def change(diff, from)
+        dependencies.map do |d|
+          d.to_s
+        end.join("\n")
+        # elements.each do |element|
 
-        end
+        # end
       end
 
       def elements
         @data['elements'][/\{(.*)\}/,1].split(/\s*,\s*/)
       end
 
-      def add
+      def add(diff)
         %Q{CREATE TYPE "#{name}" AS ENUM (\n} +
         elements.map{|e| "'#{e}'"}.map do |element|
           " #{element}"

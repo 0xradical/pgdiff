@@ -41,10 +41,10 @@ module PgDiff
         "FUNCTION"
       end
 
-      def add
+      def add(diff)
         %Q{#{definition};\n} +
         privileges.map do |privilege|
-          privilege.add
+          privilege.add(diff)
         end.join("\n")
       end
     end

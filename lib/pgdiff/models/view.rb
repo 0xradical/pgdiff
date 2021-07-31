@@ -40,13 +40,13 @@ module PgDiff
         end
       end
 
-      def add
+      def add(diff)
         %Q{CREATE #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name} AS (\n} +
         %Q{#{definition}} +
         %Q{\n);} +
         "\n" +
         privileges.map do |privilege|
-          privilege.add
+          privilege.add(diff)
         end.join("\n")
       end
     end

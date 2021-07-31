@@ -20,7 +20,7 @@ module PgDiff
         name
       end
 
-      def add
+      def add(diff)
         ""
       end
 

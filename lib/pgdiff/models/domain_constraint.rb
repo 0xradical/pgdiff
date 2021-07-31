@@ -16,7 +16,7 @@ module PgDiff
         "DOMAIN CONSTRAINT #{constraint_name} #{definition}"
       end
 
-      def add
+      def add(diff)
         %Q{ALTER DOMAIN "#{domain.name}" ADD CONSTRAINT #{constraint_name} #{definition};}
       end
     end

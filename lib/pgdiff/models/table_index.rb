@@ -24,7 +24,7 @@ module PgDiff
         "TABLE INDEX #{indexdef}"
       end
 
-      def add
+      def add(diff)
         indexdef
       end
     end
