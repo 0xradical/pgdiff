@@ -14,8 +14,8 @@ module PgDiff
       @operations << object.drop
     end
 
-    def change(object, to)
-      @operations << object.change(to)
+    def change(target, source)
+      @operations << target.change(source)
     end
   end
 end

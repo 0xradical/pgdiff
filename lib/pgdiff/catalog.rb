@@ -80,27 +80,31 @@ module PgDiff
     end
 
     def include?(object)
+      !!find(object)
+    end
+
+    def find(object)
       case object.class.name
       when "PgDiff::Models::Schema"
-        schemas.map(&:name).include?(object.name)
+        schemas.select{|o| o == object }.first
       when "PgDiff::Models::Extension"
-        extensions.map(&:name).include?(object.name)
+        extensions.select{|o| o == object }.first
       when "PgDiff::Models::Enum"
-        enums.map(&:name).include?(object.name)
+        enums.select{|o| o == object }.first
       when "PgDiff::Models::Domain"
-        domains.map(&:name).include?(object.name)
+        domains.select{|o| o == object }.first
       when "PgDiff::Models::Aggregate"
-        aggregates.map(&:name).include?(object.name)
+        aggregates.select{|o| o == object }.first
       when "PgDiff::Models::Table"
-        tables.map(&:name).include?(object.name)
+        tables.select{|o| o == object }.first
       when "PgDiff::Models::View"
-        views.map(&:name).include?(object.name)
+        views.select{|o| o == object }.first
       when "PgDiff::Models::Function"
-        functions.map(&:name).include?(object.name)
+        functions.select{|o| o == object }.first
       when "PgDiff::Models::Sequence"
-        sequences.map(&:name).include?(object.name)
+        sequences.select{|o| o == object }.first
       else
-        false
+        nil
       end
     end
 

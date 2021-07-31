@@ -19,6 +19,11 @@ module PgDiff
         @dependencies.add(dependency)
       end
 
+      def ==(other)
+        world_id == other.world_id &&
+        world_type == other.world_type
+      end
+
       def add
         raise "Not Implemented In #{self.class.name} Error"
       end

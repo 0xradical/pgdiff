@@ -33,9 +33,15 @@ require_relative "pgdiff/diff.rb"
 def PgDiff.compare(source, target)
   diff = PgDiff::Diff.new
 
-  source.catalog.each_object(deep: false) do |object|
-    if !target.catalog.include?(object)
-      diff.add(object)
+  source.catalog.each_object(deep: false) do |sobject|
+    tobject = target.catalog.find(sobject)
+
+    if tobject
+      if tobject.to_s != sobject.to_s
+        diff.change(tobject, sobject)
+      end
+    else
+      diff.add(sobject)
     end
   end
 
