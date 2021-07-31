@@ -67,31 +67,20 @@ module PgDiff
       # second pass, assign dependencies based on pgdiff::world
       @catalog.each_object(deep: true) do |object|
         id = "#{object.world_type}|#{object.world_id}"
-
         if PgDiff::World::OBJECTS[id]
-          if PgDiff::World::OBJECTS[id]["chain"].length > 0
-            object.dependency_type = PgDiff::World::OBJECTS[id]["type"]
-
-            depend_on = PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
-              if PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
+          object.dependency_type = object["dependency_type"]
+          object.depend_on = Set.new(
+            PgDiff::World::OBJECTS[id]["chain"].map do |dep_id|
+              upstream_dependency = if PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
                 PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"]
               else
                 name, world_type = PgDiff::World::IDS[dep_id].split("|")
                 PgDiff::World::OBJECTS[PgDiff::World::IDS[dep_id]]["model"] = PgDiff::Models::Unmapped.new(name, world_type)
               end
-            end.to_a
-
-            (0.upto(depend_on.length-2)).each do |cutoff_index|
-              parent = depend_on[cutoff_index]
-
-              depend_on[(cutoff_index+1)..-1].each { |dependency| parent.add_dependency(dependency) }
+              upstream_dependency.add_dependency(object)
+              upstream_dependency
             end
-
-            object.depend_on = Set.new(depend_on)
-          else
-            object.dependency_type = "none"
-            object.depend_on = Set.new([])
-          end
+          )
         end
       end
 
