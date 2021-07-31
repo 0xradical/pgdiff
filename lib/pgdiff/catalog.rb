@@ -198,13 +198,56 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT idx.relname as indexname, pg_get_indexdef(idx.oid) AS indexdef,
-        (pg_identify_object('pg_class'::regclass,idx.oid, 0)).identity
-        FROM pg_index i
-        INNER JOIN pg_class tbl ON tbl.oid = i.indrelid
-        INNER JOIN pg_namespace tbln ON tbl.relnamespace = tbln.oid
-                INNER JOIN pg_class idx ON idx.oid = i.indexrelid
-        WHERE tbln.nspname = '#{schema}' AND tbl.relname='#{table}' AND i.indisprimary = false;
+        with extension_oids as (
+          select
+              objid,
+              classid::regclass::text as classid
+          from
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass and
+              d.classid = 'pg_index'::regclass
+        ),
+        extension_relations as (
+          select
+              objid
+          from
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass and
+              d.classid = 'pg_class'::regclass
+        ), pre as (
+            SELECT
+           i.relname AS indexname,
+           (pg_identify_object('pg_class'::regclass,i.oid, 0)).identity,
+           pg_get_indexdef(i.oid) AS indexdef,
+               (
+                   select
+                       array_agg(attname order by ik.n)
+                   from
+                        unnest(x.indkey) with ordinality ik(i, n)
+                        join pg_attribute aa
+                            on
+                                aa.attrelid = x.indrelid
+                                and ik.i = aa.attnum
+                )
+          FROM pg_index x
+            JOIN pg_class c ON c.oid = x.indrelid
+            JOIN pg_class i ON i.oid = x.indexrelid
+            JOIN pg_am am ON i.relam = am.oid
+            LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+             left join extension_oids e
+              on i.oid = e.objid
+            left join extension_relations er
+              on c.oid = er.objid
+        WHERE
+            x.indislive
+            and c.relkind in ('r', 'm', 'p') AND i.relkind in ('i', 'I')
+            and nspname = '#{schema}' and c.relname = '#{table}'
+        )
+        select *
+        from pre
+        order by 1, 2, 3;
       })
     end
 
