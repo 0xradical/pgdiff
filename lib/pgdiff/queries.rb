@@ -287,7 +287,7 @@ module PgDiff
                 WHEN a.aggfinalmodify = 'w' THEN 'READ_WRITE'
               END
             ) ELSE NULL END
-            , CASE WHEN a.agginitval IS NULL THEN NULL ELSE format(E'\\tINITCOND = %s', a.agginitval) END
+            , CASE WHEN a.agginitval IS NULL THEN NULL ELSE format(E'\\tINITCOND = %s', quote_literal(a.agginitval)) END
             , format(E'\\tPARALLEL = %s',
               CASE
                 WHEN p.proparallel = 'u' THEN 'UNSAFE'

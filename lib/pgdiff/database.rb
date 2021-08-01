@@ -1,6 +1,6 @@
 module PgDiff
   class Database
-    attr_reader :catalog, :dependencies
+    attr_reader :catalog
 
     def initialize(label, dbparams = {})
       @label = label
@@ -27,6 +27,8 @@ module PgDiff
 
       setup
     end
+
+    def connection; @pg; end
 
     def setup
       @catalog ||= PgDiff::Catalog.new(@pg)

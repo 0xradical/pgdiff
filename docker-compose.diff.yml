@@ -1,0 +1,4 @@
+services:
+  target.database.io:
+    volumes:
+      - ./pgdiff.sql:/setup.sql

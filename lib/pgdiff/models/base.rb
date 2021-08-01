@@ -29,19 +29,19 @@ module PgDiff
 
       def add(diff)
         "
-        -- Addition of #{self.class.name} not implemented
+        -- Addition of #{self.class.name} (#{world_type} #{name}) not implemented
         "
       end
 
       def remove(diff)
         "
-        -- Removal of #{self.class.name} not implemented
+        -- Removal of #{self.class.name} (#{world_type} #{name}) not implemented
         "
       end
 
       def change(diff, from)
         "
-        -- Changes to #{self.class.name} not implemented
+        -- Changes to #{self.class.name} (#{world_type} #{name}) not implemented
         "
       end
 

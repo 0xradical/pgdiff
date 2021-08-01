@@ -25,7 +25,7 @@ module PgDiff
       end
 
       def add(diff)
-        indexdef
+        "#{indexdef};"
       end
     end
   end

@@ -49,6 +49,10 @@ module PgDiff
           privilege.add(diff)
         end.join("\n")
       end
+
+      def remove(diff)
+        %Q{DROP #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name};}
+      end
     end
   end
 end

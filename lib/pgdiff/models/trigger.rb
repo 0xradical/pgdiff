@@ -10,7 +10,7 @@ module PgDiff
       end
 
       def add(diff)
-        %Q{#{definition};\n}
+        %Q{#{definition};}
       end
 
       def world_type

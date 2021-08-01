@@ -10,32 +10,35 @@ module PgDiff
     end
 
     def add(object)
-      object.dependencies.i_depend_on.normal.referenced.each {|o| @added.add(o) }
+      _add(object, 0)
+    end
+
+    def _add(object, level = 0)
+      return if @added.member?(object)
       @added.add(object)
-      # return if @added[object]
-      # @added[object] = true
-      # puts "ADD #{object.class} #{object.name} #{level}"
-      # # @operations << object.add(self)
-      # object.depends_on.each do |depends_on|
-      #   puts "#{object.name} depend on #{depends_on.name}"
-      #   add(depends_on, level + 1)
-      # end
-      # object.dependencies.each{ |dependency| add(dependency, level + 1) }
+
+      object.dependencies.i_depend_on.normal.referenced.each {|o| _add(o, level + 1) }
+      object.dependencies.i_depend_on.automatic.referenced.each {|o| _add(o, level + 1) }
     end
 
     def remove(object)
-      object.dependencies.others_depend_on_me.internal.objects.each{|o| @removed.add(o) }
-      object.dependencies.others_depend_on_me.normal.objects.each{|o| @removed.add(o) }
-      @removed.add(object)
-      # return if @removed[object]
-      # object.dependencies.each{ |dependency| remove(dependency) }
-      # @operations << object.remove(self)
-      # @removed[object] = true
+      removals = Set.new
+      _remove(object, 0, removals)
+      removals.to_a.reverse.each {|r| @removed.add(r) }
+    end
+
+    def _remove(object, level = 0, set = Set.new)
+      return if set.member?(object)
+      set.add(object)
+
+      object.dependencies.others_depend_on_me.internal.objects.each{|o| _remove(o,level + 1, set) }
+      object.dependencies.others_depend_on_me.normal.objects.each{|o| _remove(o,level + 1, set) }
     end
 
     def change(target, source)
       return if @changed[source]
-      @operations << source.change(self, target)
+      @changed.add(source.change(self, target))
+      # @operations << source.change(self, target)
       # @operations << ["CHANGE", source.class, source.name]
     end
 

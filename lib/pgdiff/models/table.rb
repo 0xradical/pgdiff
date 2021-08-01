@@ -83,14 +83,13 @@ module PgDiff
           end
         ].flatten.join(",\n") +
         %Q{\n);\n\n} +
-        indexes.map do |index|
+        indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
           index.add(diff)
         end.join("\n") +
         "\n\n" +
         privileges.map do |privilege|
           privilege.add(diff)
-        end.join("\n") +
-        "\n"
+        end.join("\n")
       end
 
       def remove
