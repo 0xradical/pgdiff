@@ -86,23 +86,23 @@ module PgDiff
     def find(object)
       case object.class.name
       when "PgDiff::Models::Schema"
-        schemas.select{|o| o == object }.first
+        schemas.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Extension"
-        extensions.select{|o| o == object }.first
+        extensions.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Enum"
-        enums.select{|o| o == object }.first
+        enums.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Domain"
-        domains.select{|o| o == object }.first
+        domains.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Aggregate"
-        aggregates.select{|o| o == object }.first
+        aggregates.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Table"
-        tables.select{|o| o == object }.first
+        tables.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::View"
-        views.select{|o| o == object }.first
+        views.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Function"
-        functions.select{|o| o == object }.first
+        functions.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Sequence"
-        sequences.select{|o| o == object }.first
+        sequences.select{|o| o.gid == object.gid }.first
       else
         nil
       end

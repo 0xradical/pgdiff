@@ -41,7 +41,7 @@ def PgDiff.compare(source, target)
 
     if tobject
       if tobject.to_s != sobject.to_s
-        diff.change(tobject, sobject)
+        # diff.change(tobject, sobject)
       end
     else
       diff.add(sobject)
@@ -54,5 +54,5 @@ def PgDiff.compare(source, target)
     end
   end
 
-  diff.operations
+  diff
 end

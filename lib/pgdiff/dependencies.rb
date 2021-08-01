@@ -37,11 +37,19 @@ module PgDiff
     end
 
     def i_depend_on
-      self.class.new(@set.select{|dep| dep.object == self.object })
+      self.class.new(object, @set.select{|dep| dep.object == self.object })
     end
 
     def others_depend_on_me
-      self.class.new(@set.select{|dep| dep.referenced == self.object })
+      self.class.new(object, @set.select{|dep| dep.referenced == self.object })
+    end
+
+    def objects
+      @set.map(&:object)
+    end
+
+    def referenced
+      @set.map(&:referenced)
     end
   end
 end

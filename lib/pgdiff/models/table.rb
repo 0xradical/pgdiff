@@ -73,11 +73,6 @@ module PgDiff
       end
 
       def add(diff)
-        columns.each{|c| diff.added[c] = true }
-        constraints.each{|c| diff.added[c] = true }
-        indexes.each{|c| diff.added[c] = true }
-        privileges.each{|c| diff.added[c] = true }
-
         %Q{CREATE TABLE #{name} (\n} +
         [
           columns.map do |column|

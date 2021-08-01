@@ -15,6 +15,9 @@ module PgDiff
       def to_s; @data; end
       def inspect; to_s; end
       def id; objid; end
+      def gid
+        "#{world_type} #{world_id}"
+      end
 
       def add_dependency(dependency)
         @dependencies.add(dependency)
