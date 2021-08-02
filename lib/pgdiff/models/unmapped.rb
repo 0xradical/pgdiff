@@ -17,7 +17,7 @@ module PgDiff
         "#{world_type} #{name}"
       end
 
-      def add(diff)
+      def add
         ""
       end
     end

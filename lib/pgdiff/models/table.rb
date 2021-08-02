@@ -65,23 +65,23 @@ module PgDiff
         end
       end
 
-      def add(diff)
+      def add
         %Q{CREATE TABLE #{name} (\n} +
         [
           columns.map do |column|
-            "    " + column.add(diff)
+            "    " + column.add
           end,
           constraints.map do |constraint|
-            "    " + constraint.add(diff)
+            "    " + constraint.add
           end
         ].flatten.join(",\n") +
         %Q{\n);\n\n} +
         indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
-          index.add(diff)
+          index.add
         end.join("\n") +
         "\n\n" +
         privileges.map do |privilege|
-          privilege.add(diff)
+          privilege.add
         end.join("\n")
       end
 

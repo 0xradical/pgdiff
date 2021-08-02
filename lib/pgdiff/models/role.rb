@@ -17,7 +17,7 @@ module PgDiff
         %Q{ROLE "#{name}" #{rolinherit == 't' ? 'INHERIT' : 'NOINHERIT'} #{rolcanlogin == 't' ? 'LOGIN' : 'NOLOGIN'}}
       end
 
-      def add(diff)
+      def add
         %Q{CREATE ROLE "#{name}" #{rolinherit == 't' ? 'INHERIT' : 'NOINHERIT'} #{rolcanlogin == 't' ? 'LOGIN' : 'NOLOGIN'};}
       end
     end

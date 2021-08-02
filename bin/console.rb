@@ -1,4 +1,4 @@
 @source = PgDiff::Database.new( "source", port: 54532, dbname: "pgdiff", host: "0.0.0.0", password: "postgres", user: "postgres")
 @target = PgDiff::Database.new( "target", port: 54533, dbname: "pgdiff", host: "0.0.0.0", password: "postgres", user: "postgres")
 
-# @diff = PgDiff.compare(@source, @target)
+PgDiff.compare(@source.world, @target.world)

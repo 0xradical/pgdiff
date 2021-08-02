@@ -26,7 +26,7 @@ module PgDiff
         @data['elements'][/\{(.*)\}/,1].split(/\s*,\s*/)
       end
 
-      def add(diff)
+      def add
         %Q{CREATE TYPE "#{name}" AS ENUM (\n} +
         elements.map{|e| "'#{e}'"}.map do |element|
           " #{element}"

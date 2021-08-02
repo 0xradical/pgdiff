@@ -44,6 +44,7 @@ module PgDiff
           # but should be created (GRANT / REVOKE) explicitly when tables are created
           # they are marked as a oncreate dependency
           table.add_privileges(@queries.table_privileges(table.name))
+          table.privileges.each{|p|   }
 
           # only constraints and indexes have objid
           # so they should be added to world
@@ -101,9 +102,13 @@ module PgDiff
         when Hash, Array
           objclass = @world.classes[dep["objid"]]
           @world.objects[dep["objid"]] = build_object(objdata, objclass)
+          @world.gids[@world.objects[dep["objid"]].gid] = dep["objid"]
+          @world.objects[dep["objid"]]
         when NilClass
           @world.classes[dep["objid"]] = Models::Unmapped
           @world.objects[dep["objid"]] = PgDiff::Models::Unmapped.new(dep["objid"], dep["object_identity"], dep["object_type"], @label)
+          @world.gids[@world.objects[dep["objid"]].gid] = dep["objid"]
+          @world.objects[dep["objid"]]
         else
           objdata
         end
@@ -134,6 +139,7 @@ module PgDiff
 
         if objdata
           @world.objects[id] = build_object(objdata, objclass)
+          @world.gids[@world.objects[id].gid] = id
         end
       end
     end

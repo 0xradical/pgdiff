@@ -35,7 +35,7 @@ module PgDiff
         objid == other.objid
       end
 
-      def add(diff)
+      def add
         "
         -- Addition of #{self.class.name} (#{world_type} #{name}) not implemented
         "

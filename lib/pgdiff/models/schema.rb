@@ -17,7 +17,7 @@ module PgDiff
         "SCHEMA"
       end
 
-      def add(diff)
+      def add
         return "" if nspname == "public"
         %Q{CREATE SCHEMA IF NOT EXISTS "#{nspname}";}
       end

@@ -50,7 +50,7 @@ module PgDiff
         "VIEW PRIVILEGE #{user} #{operations.join(", ")}"
       end
 
-      def add(diff)
+      def add
         %Q{REVOKE ALL PRIVILEGES ON #{name} FROM "#{user}";\n} +
         OPERATIONS.map do |op|
           if @data[op] == "t"

@@ -17,10 +17,11 @@ module PgDiff
                 :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
                 :domains, :enums, :types, :extensions, :triggers,
-                :indexes, :constraints
+                :indexes, :constraints, :gids
 
     def initialize
       @objects      = Hash.new
+      @gids         = Hash.new
       @classes      = Hash.new
       @dependencies = Hash.new
       @roles        = Hash.new
@@ -105,33 +106,12 @@ module PgDiff
       !!find(object)
     end
 
+    def find_by_gid(gid)
+      @objects[@gids[gid]]
+    end
+
     def find(object)
-      case object.class.name
-      when "PgDiff::Models::Schema"
-        schemas.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Role"
-        roles.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Extension"
-        extensions.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Enum"
-        enums.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Domain"
-        domains.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Rule"
-        rules.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Aggregate"
-        aggregates.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Table"
-        tables.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::View"
-        views.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Function"
-        functions.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Sequence"
-        sequences.select{|o| o.gid == object.gid }.first
-      else
-        nil
-      end
+      find_by_gid(object.gid)
     end
   end
 end

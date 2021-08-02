@@ -41,7 +41,7 @@ module PgDiff
         "TABLE CONSTRAINT"
       end
 
-      def add(diff)
+      def add
         %Q{CONSTRAINT #{name} #{definition}}
       end
     end

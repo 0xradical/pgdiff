@@ -16,7 +16,7 @@ module PgDiff
         "AGGREGATE"
       end
 
-      def add(diff)
+      def add
         %Q{CREATE AGGREGATE #{name} (#{argtypes})\n(\n} +
         %Q{#{definition}} +
         %Q{\n);}

@@ -24,7 +24,7 @@ module PgDiff
         "#{to_s} ON #{table.name}"
       end
 
-      def add(diff)
+      def add
         ""
       end
 

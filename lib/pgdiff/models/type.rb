@@ -17,7 +17,7 @@ module PgDiff
         %Q{TYPE #{name}}
       end
 
-      def add(diff)
+      def add
         ""
       end
     end

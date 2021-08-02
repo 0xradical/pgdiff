@@ -76,7 +76,7 @@ module PgDiff
         %Q{ALTER TABLE #{table.name} ADD COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''};}
       end
 
-      def add(diff)
+      def add
         %Q{#{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}}
       end
     end

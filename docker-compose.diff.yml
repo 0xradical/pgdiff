@@ -1,4 +1,6 @@
 services:
   target.database.io:
+    environment:
+      - PSQL_PIPE=cat
     volumes:
       - ./pgdiff.sql:/setup.sql
