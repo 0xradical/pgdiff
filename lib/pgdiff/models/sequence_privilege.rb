@@ -39,6 +39,10 @@ module PgDiff
         to_s
       end
 
+      def gid
+        "SEQUENCE PRIVILEGE FOR #{user} ON #{sequence.name}"
+      end
+
       def to_s
         "SEQUENCE PRIVILEGE #{user} #{operations.join(", ")}"
       end

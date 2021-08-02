@@ -20,6 +20,10 @@ module PgDiff
         "INDEX"
       end
 
+      def gid
+        "TABLE INDEX ON #{table.name}"
+      end
+
       def to_s
         "TABLE INDEX #{indexdef}"
       end

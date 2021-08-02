@@ -6,7 +6,13 @@ module PgDiff
         # add dependencies artificially :/
         columns.each do |column|
           if !world.objects[column['objid']]
-            world.add_object(PgDiff::Models::Unmapped.new(column['objid'], column['attribute'], column['type']))
+            world.add_object(
+              PgDiff::Models::Type.new({
+                "objid" => column['objid'],
+                "type" => column['type'],
+                "identity" => column["identity"]
+              })
+            )
           end
 
           world.add_dependency(

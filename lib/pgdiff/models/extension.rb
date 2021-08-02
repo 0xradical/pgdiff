@@ -13,6 +13,10 @@ module PgDiff
         "EXTENSION"
       end
 
+      def gid
+        to_s
+      end
+
       def add(diff)
         %Q{CREATE EXTENSION IF NOT EXISTS "#{@data['name']}" WITH SCHEMA #{schema};}
       end

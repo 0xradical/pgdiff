@@ -517,7 +517,6 @@ module PgDiff
       })
     end
 
-
     def custom_types(schemas = self.schemas.map{|row| row["nspname"] })
       query(%Q{
         with extension_oids as (
@@ -551,7 +550,7 @@ module PgDiff
           pg_catalog.obj_description (t.oid, 'pg_type') AS description,
           (array_to_json(array(
             select
-              jsonb_build_object('attribute', attname, 'type', an.nspname || '.' || a.typname, 'objid', a.oid, 'identity', (pg_identify_object('pg_type'::regclass, a.oid, 0)).identity)
+              jsonb_build_object('attribute', attname, 'type', an.nspname || '.' || a.typname, 'objid', a.oid, 'identity', (pg_identify_object('pg_type'::regclass, a.oid, 0)).identity, 'origin', '#{label}')
             from pg_class
             join pg_attribute on (attrelid = pg_class.oid)
             join pg_type a on (atttypid = a.oid)

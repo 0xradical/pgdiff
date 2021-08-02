@@ -12,6 +12,10 @@ module PgDiff
         "DOMAIN CONSTRAINT"
       end
 
+      def gid
+        "DOMAIN CONSTRAINT ON #{domain.name}"
+      end
+
       def to_s
         "DOMAIN CONSTRAINT #{constraint_name} #{definition}"
       end

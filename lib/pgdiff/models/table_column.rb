@@ -60,6 +60,10 @@ module PgDiff
         typcategory
       end
 
+      def gid
+        "TABLE COLUMN #{name} ON #{table.name}"
+      end
+
       def to_s
         "TABLE COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}"
       end

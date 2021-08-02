@@ -33,6 +33,10 @@ module PgDiff
         to_s
       end
 
+      def gid
+        "FUNCTION PRIVILEGE FOR #{user} ON #{function.name}"
+      end
+
       def to_s
         "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}(#{argtypes})"
       end

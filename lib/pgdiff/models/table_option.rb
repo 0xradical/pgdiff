@@ -20,6 +20,10 @@ module PgDiff
         name
       end
 
+      def gid
+        "#{to_s} ON #{table.name}"
+      end
+
       def add(diff)
         ""
       end

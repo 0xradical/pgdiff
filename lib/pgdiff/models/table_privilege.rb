@@ -42,6 +42,10 @@ module PgDiff
         to_s
       end
 
+      def gid
+        "TABLE PRIVILEGE FOR #{user} ON #{table.name}"
+      end
+
       def to_s
         "TABLE PRIVILEGE #{user} #{operations.join(", ")}"
       end

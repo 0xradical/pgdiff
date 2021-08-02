@@ -42,6 +42,10 @@ module PgDiff
         to_s
       end
 
+      def gid
+        "VIEW PRIVILEGE FOR #{user} ON #{view.name}"
+      end
+
       def to_s
         "VIEW PRIVILEGE #{user} #{operations.join(", ")}"
       end
