@@ -8,6 +8,15 @@ module PgDiff
       def initialize(data)
         @data = data
         @dependencies = PgDiff::Dependencies.new(self)
+        world.public_send("add_#{model}", self) if world.respond_to?("add_#{model}")
+      end
+
+      def model
+        self.class.name.split("::").last.downcase
+      end
+
+      def world
+        PgDiff::World[origin]
       end
 
       def to_s; @data; end

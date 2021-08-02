@@ -2,10 +2,6 @@ module PgDiff
   class Catalog
     include Enumerable
 
-    attr_reader :roles, :schemas, :tables, :views,
-                :functions, :aggregates, :sequences,
-                :domains, :enums, :types, :extensions, :triggers
-
     def initialize(connection, label = "unknown")
       @connection = connection
       @query = PgDiff::Queries.new(connection, label)
@@ -52,55 +48,6 @@ module PgDiff
       end
       @query.triggers.map do |data|
         @world.add_object(data, Models::Trigger)
-      end
-    end
-
-    # deep each (every object and its attributes)
-    def each_object(deep: true)
-      [
-        @roles, @schemas, @extensions, @enums,
-        @domains, @types, @aggregates, @tables,
-        @views, @functions, @sequences, @triggers
-      ].each do |family|
-        family.each do |parent|
-          yield parent
-          if deep
-            parent.each { |child| yield child }
-          end
-        end
-      end
-    end
-
-    def include?(object)
-      !!find(object)
-    end
-
-    def find(object)
-      case object.class.name
-      when "PgDiff::Models::Schema"
-        schemas.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Role"
-        roles.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Extension"
-        extensions.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Enum"
-        enums.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Domain"
-        domains.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Rule"
-        rules.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Aggregate"
-        aggregates.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Table"
-        tables.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::View"
-        views.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Function"
-        functions.select{|o| o.gid == object.gid }.first
-      when "PgDiff::Models::Sequence"
-        sequences.select{|o| o.gid == object.gid }.first
-      else
-        nil
       end
     end
   end

@@ -13,6 +13,10 @@ module PgDiff
         "UNMAPPED (#{world_type} #{name})"
       end
 
+      def gid
+        "#{world_type} #{name}"
+      end
+
       def add(diff)
         ""
       end

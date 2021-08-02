@@ -31,8 +31,8 @@ module PgDiff
     def connection; @pg; end
 
     def build_object(objdata, objclass)
-      case objclass
-      when Models::Table
+      case objclass.name
+      when "PgDiff::Models::Table"
         objclass.new(objdata).tap do |table|
           table.add_columns(@queries.table_columns(table.name))
           table.add_constraints(@queries.table_constraints(table.name))
@@ -40,22 +40,22 @@ module PgDiff
           table.add_options(@queries.table_options(table.name))
           table.add_privileges(@queries.table_privileges(table.name))
         end
-      when Models::View
+      when "PgDiff::Models::View"
         objclass.new(objdata).tap do |view|
           view.add_privileges(
             view.materialized? ?  @queries.materialized_view_privileges(view.name) :
                                   @queries.view_privileges(view.name)
           )
         end
-      when Models::Function
+      when "PgDiff::Models::Function"
         objclass.new(objdata).tap do |function|
           function.add_privileges(@queries.function_privileges(function.name, function.argtypes))
         end
-      when Models::Sequence
+      when "PgDiff::Models::Sequence"
         objclass.new(objdata).tap do |sequence|
           sequence.add_privileges(@queries.sequence_privileges(sequence.name))
         end
-      when Models::Domain
+      when "PgDiff::Models::Domain"
         objclass.new(objdata).tap do |domain|
           domain.add_constraints(@queries.domain_constraints(domain.name))
         end

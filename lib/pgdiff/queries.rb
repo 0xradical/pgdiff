@@ -618,7 +618,7 @@ module PgDiff
     def dependency_pairs
       query(%Q{
         WITH recursive preference AS (
-          SELECT 10 AS max_depth
+          SELECT 15 AS max_depth
             , 16384 AS min_oid -- user objects only
             , '^(londiste|pgq|pg_toast|pg_catalog)'::text AS schema_exclusion
             , '^pg_(conversion|language|ts_(dict|template))'::text AS class_exclusion
@@ -689,7 +689,6 @@ module PgDiff
           AND NOT (child.objid = ANY(parent.dependency_chain))
       )
       SELECT level, objid, object_type, object_identity, dependency_type, to_json(dependency_chain::text[]) AS dependency_chain FROM dependency_hierarchy
-      where level <= 1
       ORDER BY level, objid;
       })
     end
