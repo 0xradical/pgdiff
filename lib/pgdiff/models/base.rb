@@ -18,6 +18,7 @@ module PgDiff
 
       def to_s; @data; end
       def inspect; to_s; end
+      def objid; @data['objid'] || to_s; end
       def id; objid; end
       def gid
         "#{world_type} #{world_id}"

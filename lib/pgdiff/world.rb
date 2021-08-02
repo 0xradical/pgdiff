@@ -18,7 +18,9 @@ module PgDiff
     end
 
     def add_object(object, id = nil)
-      @objects[id || object.objid] = object
+      _id = id || object.objid
+      raise "ID cannot be Nil: #{object.name} does not have objid" if _id.nil?
+      @objects[_id] = object
     end
 
     def add_dependency(dependency)
