@@ -3,7 +3,7 @@ module PgDiff
     class Role < Base
       def initialize(data)
         super(data)
-        PgDiff::World.add_role(self)
+        world.add_role(self)
       end
 
       def name

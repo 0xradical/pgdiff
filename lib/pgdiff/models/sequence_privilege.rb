@@ -13,10 +13,10 @@ module PgDiff
         super(data)
         @sequence = sequence
 
-        PgDiff::World.add_dependency(
+        world.add_dependency(
           PgDiff::Dependency.new(
             self,
-            PgDiff::World::ROLES[user],
+            world.roles[user],
             "internal"
           )
         )

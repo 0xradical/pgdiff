@@ -4,6 +4,19 @@ module PgDiff
       def initialize(data)
         super(data)
         # add dependencies artificially :/
+        columns.each do |column|
+          if !world.objects[column['objid']]
+            world.add_object(PgDiff::Models::Unmapped.new(column['objid'], column['attribute'], column['type']))
+          end
+
+          world.add_dependency(
+            PgDiff::Dependency.new(
+              self,
+              world.objects[column['objid']],
+              "internal"
+            )
+          )
+        end
       end
 
       def world_type

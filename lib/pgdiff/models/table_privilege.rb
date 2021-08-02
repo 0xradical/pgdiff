@@ -17,10 +17,10 @@ module PgDiff
         super(data)
         @table = table
 
-        PgDiff::World.add_dependency(
+        world.add_dependency(
           PgDiff::Dependency.new(
             self,
-            PgDiff::World::ROLES[user],
+            world.roles[user],
             "internal"
           )
         )

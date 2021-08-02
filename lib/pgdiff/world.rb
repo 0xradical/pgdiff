@@ -1,17 +1,32 @@
 module PgDiff
-  module World
-    extend self
-    # maps object.identity to model
-    OBJECTS      = Hash.new
-    DEPENDENCIES = Hash.new
-    ROLES        = Hash.new
+  class World
+    @@worlds = Hash.new
+    def self.[]=(id, world)
+      @@worlds[id] = world
+    end
+
+    def self.[](id)
+      @@worlds[id]
+    end
+
+    attr_reader :objects, :dependencies, :roles
+
+    def initialize
+      @objects = Hash.new
+      @dependencies = Hash.new
+      @roles = Hash.new
+    end
+
+    def add_object(object, id = nil)
+      @objects[id || object.objid] = object
+    end
 
     def add_dependency(dependency)
-      DEPENDENCIES[dependency.hash] ||= dependency
+      @dependencies[dependency.hash] ||= dependency
     end
 
     def add_role(role)
-      ROLES[role.name] ||= role
+      @roles[role.name] ||= role
     end
   end
 end

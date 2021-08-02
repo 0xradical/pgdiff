@@ -7,10 +7,10 @@ module PgDiff
         super(data)
         @function = function
 
-        PgDiff::World.add_dependency(
+        world.add_dependency(
           PgDiff::Dependency.new(
             self,
-            PgDiff::World::ROLES[user],
+            world.roles[user],
             "internal"
           )
         )

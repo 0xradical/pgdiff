@@ -6,9 +6,9 @@ module PgDiff
                 :functions, :aggregates, :sequences,
                 :domains, :enums, :custom_types, :extensions, :triggers
 
-    def initialize(connection)
+    def initialize(connection, label = "unknown")
       @connection = connection
-      @query = PgDiff::Queries.new(connection)
+      @query = PgDiff::Queries.new(connection, label)
       collect_objects!
     end
 

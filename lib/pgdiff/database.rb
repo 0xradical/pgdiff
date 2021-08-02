@@ -1,6 +1,6 @@
 module PgDiff
   class Database
-    attr_reader :catalog
+    attr_reader :catalog, :world
 
     def initialize(label, dbparams = {})
       @label = label
@@ -31,22 +31,23 @@ module PgDiff
     def connection; @pg; end
 
     def setup
-      @catalog ||= PgDiff::Catalog.new(@pg)
+      @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
+      @catalog ||= PgDiff::Catalog.new(@pg, @label)
 
       PgDiff::Queries.new(@pg).dependency_pairs.each do |dep|
-        object = PgDiff::World::OBJECTS[dep["objid"]]
+        object = @world.objects[dep["objid"]]
 
         if !object
           object = PgDiff::Models::Unmapped.new(dep["objid"], dep["object_identity"], dep["object_type"])
         end
 
-        referenced = PgDiff::World::OBJECTS[dep["refobjid"]]
+        referenced = @world.objects[dep["refobjid"]]
 
         if !referenced
           referenced = PgDiff::Models::Unmapped.new(dep["refobjid"], dep["refobj_identity"], dep["refobj_type"])
         end
 
-        PgDiff::World.add_dependency(
+        @world.add_dependency(
           PgDiff::Dependency.new(
             object,
             referenced,
