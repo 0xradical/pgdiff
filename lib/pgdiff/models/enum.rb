@@ -27,7 +27,7 @@ module PgDiff
       end
 
       def add
-        %Q{CREATE TYPE "#{name}" AS ENUM (\n} +
+        %Q{CREATE TYPE #{name} AS ENUM (\n} +
         elements.map{|e| "'#{e}'"}.map do |element|
           " #{element}"
         end.join(",\n") +

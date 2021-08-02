@@ -42,7 +42,19 @@ module PgDiff
       # Reverse-compiling the adbin field (with pg_get_expr for example) is a better way
       # to display the default value.
       def default_value
-        adsrc
+        # adsrc
+        # it's probably a function
+        if adsrc =~ /\(\)/
+          # check schema presence...
+          if adsrc =~ /[^\.]+\./
+            adsrc
+          else
+            # assume public
+            "public.#{adsrc}"
+          end
+        else
+          adsrc
+        end
       end
 
       # Code	Category

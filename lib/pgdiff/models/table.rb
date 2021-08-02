@@ -72,12 +72,12 @@ module PgDiff
             "    " + column.add
           end,
           constraints.map do |constraint|
-            "    " + constraint.add
+            "    " + constraint.indexdef
           end
         ].flatten.join(",\n") +
         %Q{\n);\n\n} +
         indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
-          index.add
+          index.indexdef
         end.join("\n") +
         "\n\n" +
         privileges.map do |privilege|

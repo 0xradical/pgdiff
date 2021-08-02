@@ -44,7 +44,6 @@ module PgDiff
           # but should be created (GRANT / REVOKE) explicitly when tables are created
           # they are marked as a oncreate dependency
           table.add_privileges(@queries.table_privileges(table.name))
-          table.privileges.each{|p|   }
 
           # only constraints and indexes have objid
           # so they should be added to world
@@ -94,6 +93,7 @@ module PgDiff
       @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
       @catalog ||= PgDiff::Catalog.new(@pg, @label)
       @queries ||= PgDiff::Queries.new(@pg, @label)
+      @subids    = []
 
       @queries.dependency_pairs.each do |dep|
         objdata  = @world.objects[dep["objid"]]
@@ -110,6 +110,12 @@ module PgDiff
           @world.gids[@world.objects[dep["objid"]].gid] = dep["objid"]
           @world.objects[dep["objid"]]
         else
+          # we're talking about a column
+          # objdata already exists and it's already a composite type or a table
+          # if dep["objsubid"].to_i > 0
+          #   @subids << dep
+          # end
+
           objdata
         end
 
@@ -131,6 +137,7 @@ module PgDiff
       end
 
       # objects that do not appear on dependency pairs
+      # for some reason...
       @world.objects.select do |id,o|
         o.is_a?(Hash)
       end.each do |id,o|
@@ -140,6 +147,21 @@ module PgDiff
         if objdata
           @world.objects[id] = build_object(objdata, objclass)
           @world.gids[@world.objects[id].gid] = id
+        end
+      end
+
+      # process columns because some types
+      # don't appear on pg_depend ?
+      @world.tables.values.each do |table|
+        table.columns.each do |column|
+          type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
+          @world.add_dependency(
+            PgDiff::Dependency.new(
+              table,
+              type,
+              "normal"
+            )
+          )
         end
       end
     end

@@ -41,8 +41,12 @@ module PgDiff
         "TABLE CONSTRAINT"
       end
 
-      def add
+      def indexdef
         %Q{CONSTRAINT #{name} #{definition}}
+      end
+
+      def add
+        ""
       end
     end
   end

@@ -29,7 +29,8 @@ module PgDiff
       end
 
       def add
-        "#{indexdef};"
+        # "#{indexdef};"
+        ""
       end
     end
   end

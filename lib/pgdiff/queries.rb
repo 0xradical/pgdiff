@@ -480,7 +480,6 @@ module PgDiff
         WHERE t.typtype = 'd'
             AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
             AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
-            AND t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
     end
@@ -511,7 +510,6 @@ module PgDiff
           AND rr.conname IS NOT NULL
           AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
           AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
-          AND t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
     end
@@ -573,7 +571,6 @@ module PgDiff
           )
         )
         and t.typtype NOT IN ('e', 'd')
-        and t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
     end
@@ -619,19 +616,20 @@ module PgDiff
       query(%Q{
         WITH recursive preference AS (
           SELECT 15 AS max_depth
-            , 16384 AS min_oid -- user objects only
-            , '^(londiste|pgq|pg_toast|pg_catalog)'::text AS schema_exclusion
+            , 1 AS min_oid -- user objects only
+            , '^(everything)'::text AS schema_exclusion
             , '^pg_(conversion|language|ts_(dict|template))'::text AS class_exclusion
         ),
         dependency_pair AS (
-          SELECT distinct on (objid, refobjid) objid
-            , array_agg(objsubid ORDER BY objsubid) AS objsubids
+          SELECT distinct on (objid, refobjid)
+              objid
+            , objsubid
             , upper(obj.type) AS object_type
             , coalesce(obj.schema, substring(obj.identity, E'(\\w+?)\\.'), '') AS object_schema
             , obj.name AS object_name
             , obj.identity AS object_identity
             , refobjid
-            , array_agg(refobjsubid ORDER BY refobjsubid) AS refobjsubids
+            , refobjsubid
             , upper(refobj.type) AS refobj_type
             , coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
                                                       ELSE refobj.schema END
@@ -656,13 +654,14 @@ module PgDiff
           AND coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
                                                       ELSE refobj.schema END
                 , substring(refobj.identity, E'(\\w+?)\\.'), '') !~ preference.schema_exclusion
-          GROUP BY objid, obj.type, obj.schema, obj.name, obj.identity
-            , refobjid, refobj.type, refobj.schema, refobj.name, refobj.identity, deptype
+          GROUP BY objid, objsubid, obj.type, obj.schema, obj.name, obj.identity
+            , refobjid, refobjsubid, refobj.type, refobj.schema, refobj.name, refobj.identity, deptype
         )
         , dependency_hierarchy AS (
           SELECT DISTINCT
               0 AS level,
               refobjid AS objid,
+              refobjsubid AS objsubid,
               refobj_type AS object_type,
               refobj_identity AS object_identity,
               NULL::text AS dependency_type,
@@ -676,6 +675,7 @@ module PgDiff
           SELECT
               level + 1 AS level,
               child.objid,
+              child.objsubid,
               child.object_type,
               child.object_identity,
               child.dependency_type,
@@ -688,8 +688,8 @@ module PgDiff
           AND child.refobj_schema !~ preference.schema_exclusion
           AND NOT (child.objid = ANY(parent.dependency_chain))
       )
-      SELECT level, objid, object_type, object_identity, dependency_type, to_json(dependency_chain::text[]) AS dependency_chain FROM dependency_hierarchy
-      ORDER BY level, objid;
+      SELECT level, objid, objsubid, object_type, object_identity, dependency_type, to_json(dependency_chain::text[]) AS dependency_chain FROM dependency_hierarchy
+      ORDER BY level, objid, objsubid;
       })
     end
 
