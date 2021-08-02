@@ -14,36 +14,36 @@ module PgDiff
       @change  = Hash.new
     end
 
-    def add(node)
+    def _add(node)
       return if @added[node.gid]
       return if @common[node.gid]
 
       @added[node.gid] = true
 
       node.dependencies.i_depend_on.referenced.each do |dependency|
-        add(dependency)
+        _add(dependency)
       end
 
       @add[node.gid] = node
 
       # others that are internal are created automatically
       node.dependencies.others_depend_on_me.normal.objects.each do |dependency|
-        add(dependency)
+        _add(dependency)
       end
     end
 
-    def remove(node)
+    def _remove(node)
       return if @removed[node.gid]
       return if @common[node.gid]
 
       @removed[node.gid] = true
 
       node.dependencies.others_depend_on_me.internal.objects.each do |dependency|
-        remove(node)
+        _remove(node)
       end
 
       node.dependencies.others_depend_on_me.normal.objects.each do |dependency|
-        remove(node)
+        _remove(node)
       end
 
       @remove[node.gid] = node
@@ -60,14 +60,14 @@ module PgDiff
       # Add these
       source.objects.values.select do |object|
         if !target.find(object)
-          add(object)
+          _add(object)
         end
       end
 
       # Remove these
       target.objects.values.select do |object|
         if !source.find(object)
-          remove(object)
+          _remove(object)
         end
       end
 

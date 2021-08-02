@@ -52,7 +52,7 @@ def PgDiff.compare(source, target)
     raise "Cannot diff databases, conflicting operations"
   end
 
-  sql += tree.added.reduce("") do |acc, (gid, _)|
+  sql += tree.add.reduce("") do |acc, (gid, _)|
     object = source.find_by_gid(gid)
 
     if object.nil? || object.add.empty?

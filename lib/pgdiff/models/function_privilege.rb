@@ -43,9 +43,9 @@ module PgDiff
 
       def add
         if execute == 't'
-          %Q{GRANT EXECUTE ON #{name}(#{argtypes}) TO "#{user}";}
+          %Q{GRANT EXECUTE ON #{name} TO "#{user}";}
         else
-          %Q{REVOKE EXECUTE ON #{name}(#{argtypes}) FROM "#{user}";}
+          %Q{REVOKE EXECUTE ON #{name} FROM "#{user}";}
         end
       end
     end

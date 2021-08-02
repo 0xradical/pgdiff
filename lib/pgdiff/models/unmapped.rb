@@ -2,8 +2,8 @@ module PgDiff
   module Models
     class Unmapped < Base
       def initialize(objid, name, world_type, origin)
-        super({ "objid" => objid, "origin" => origin })
         @name, @world_type = name, world_type
+        super({ "objid" => objid, "origin" => origin })
       end
 
       def name; @name; end

@@ -17,7 +17,7 @@ module PgDiff
                 :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
                 :domains, :enums, :types, :extensions, :triggers,
-                :indexes, :constraints, :gids
+                :indexes, :constraints, :gids, :unmapped
 
     def initialize
       @objects      = Hash.new
