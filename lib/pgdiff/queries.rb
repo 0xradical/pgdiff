@@ -6,6 +6,25 @@ module PgDiff
       @connection = connection
     end
 
+    def roles
+      query(%Q{
+        SELECT rolname,
+        rolname AS identity,
+        oid AS objid,
+        rolsuper,
+        rolinherit,
+        rolcreaterole,
+        rolcreatedb,
+        rolcanlogin,
+        rolreplication,
+        rolconnlimit,
+        rolvaliduntil,
+        rolbypassrls,
+        rolconfig
+        FROM pg_roles where rolname !~ '^pg';
+      })
+    end
+
     def schemas
       query(%Q{
         SELECT nspname, nspowner::regrole::name as owner, oid as objid, (pg_identify_object('pg_namespace'::regclass, oid, 0)).identity FROM pg_namespace
@@ -473,6 +492,74 @@ module PgDiff
           AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
           AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
           AND t.oid not in (select * from extension_oids)
+        ORDER BY 1, 2;
+      })
+    end
+
+
+    def custom_types(schemas = self.schemas.map{|row| row["nspname"] })
+      query(%Q{
+        with extension_oids as (
+          select
+              objid
+          from
+              pg_depend d
+          WHERE
+              d.refclassid = 'pg_extension'::regclass and
+              d.classid = 'pg_type'::regclass
+        )
+
+        SELECT
+          n.nspname AS schema,
+          pg_catalog.format_type (t.oid, NULL) AS name,
+          t.typname AS internal_name,
+          CASE
+            WHEN t.typrelid != 0
+              THEN CAST ( 'tuple' AS pg_catalog.text )
+            WHEN t.typlen < 0
+              THEN CAST ( 'var' AS pg_catalog.text )
+            ELSE CAST ( t.typlen AS pg_catalog.text )
+          END AS size,
+          pg_catalog.array_to_string (
+            ARRAY(
+              SELECT e.enumlabel
+                FROM pg_catalog.pg_enum e
+                WHERE e.enumtypid = t.oid
+                ORDER BY e.oid ), E'\n'
+            ) AS columns,
+          pg_catalog.obj_description (t.oid, 'pg_type') AS description,
+          (array_to_json(array(
+            select
+              jsonb_build_object('attribute', attname, 'type', an.nspname || '.' || a.typname, 'oid', a.oid, 'identity', (pg_identify_object('pg_type'::regclass, a.oid, 0)).identity)
+            from pg_class
+            join pg_attribute on (attrelid = pg_class.oid)
+            join pg_type a on (atttypid = a.oid)
+            JOIN pg_catalog.pg_namespace an ON an.oid = a.typnamespace
+            where (pg_class.reltype = t.oid)
+          ))) as columns,
+          (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity,
+          t.oid as objid
+        FROM
+          pg_catalog.pg_type t
+          LEFT JOIN pg_catalog.pg_namespace n
+            ON n.oid = t.typnamespace
+        WHERE (
+          t.typrelid = 0
+          OR (
+            SELECT c.relkind = 'c'
+              FROM pg_catalog.pg_class c
+              WHERE c.oid = t.typrelid
+          )
+        )
+        AND NOT EXISTS (
+          SELECT 1
+            FROM pg_catalog.pg_type el
+            WHERE el.oid = t.typelem
+            AND el.typarray = t.oid
+        )
+        AND n.nspname IN ('#{schemas.join("','")}')
+        and t.typcategory = 'C'
+        and t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
     end

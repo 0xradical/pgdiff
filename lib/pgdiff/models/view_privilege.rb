@@ -16,6 +16,14 @@ module PgDiff
       def initialize(data, view)
         super(data)
         @view = view
+
+        PgDiff::World.add_dependency(
+          PgDiff::Dependency.new(
+            self,
+            PgDiff::World::ROLES[user],
+            "internal"
+          )
+        )
       end
 
       def name
@@ -31,7 +39,7 @@ module PgDiff
       end
 
       def world_id
-        name
+        to_s
       end
 
       def to_s

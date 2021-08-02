@@ -12,6 +12,14 @@ module PgDiff
       def initialize(data, sequence)
         super(data)
         @sequence = sequence
+
+        PgDiff::World.add_dependency(
+          PgDiff::Dependency.new(
+            self,
+            PgDiff::World::ROLES[user],
+            "internal"
+          )
+        )
       end
 
       def name
@@ -22,14 +30,13 @@ module PgDiff
         usename
       end
 
-
       def world_type
         "SEQUENCE PRIVILEGE"
       end
 
       # privileges don't have identities
       def world_id
-        name
+        to_s
       end
 
       def to_s

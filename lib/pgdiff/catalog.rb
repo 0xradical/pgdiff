@@ -2,9 +2,9 @@ module PgDiff
   class Catalog
     include Enumerable
 
-    attr_reader :schemas, :tables, :views,
+    attr_reader :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums, :extensions, :triggers
+                :domains, :enums, :custom_types, :extensions, :triggers
 
     def initialize(connection)
       @connection = connection
@@ -13,6 +13,9 @@ module PgDiff
     end
 
     def collect_objects!
+      @roles = @query.roles.map do |data|
+        Models::Role.new(data)
+      end
       @schemas = @query.schemas.map do |data|
         Models::Schema.new(data)
       end
@@ -58,6 +61,9 @@ module PgDiff
           domain.add_constraints(@query.domain_constraints(domain.name))
         end
       end
+      @custom_types = @query.custom_types.map do |data|
+        Models::CustomType.new(data)
+      end
       @triggers = @query.triggers.map do |data|
         Models::Trigger.new(data)
       end
@@ -66,8 +72,8 @@ module PgDiff
     # deep each (every object and its attributes)
     def each_object(deep: true)
       [
-        @schemas, @extensions, @enums,
-        @domains, @aggregates, @tables,
+        @roles, @schemas, @extensions, @enums,
+        @domains, @custom_types, @aggregates, @tables,
         @views, @functions, @sequences, @triggers
       ].each do |family|
         family.each do |parent|
@@ -87,12 +93,16 @@ module PgDiff
       case object.class.name
       when "PgDiff::Models::Schema"
         schemas.select{|o| o.gid == object.gid }.first
+      when "PgDiff::Models::Role"
+        roles.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Extension"
         extensions.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Enum"
         enums.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Domain"
         domains.select{|o| o.gid == object.gid }.first
+      when "PgDiff::Models::Rule"
+        rules.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Aggregate"
         aggregates.select{|o| o.gid == object.gid }.first
       when "PgDiff::Models::Table"
