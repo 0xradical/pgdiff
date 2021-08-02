@@ -8,12 +8,6 @@ module PgDiff
       def initialize(data)
         @data = data
         @dependencies = PgDiff::Dependencies.new(self)
-        # register itself into world if it exists
-        world.add_object(self) if world
-      end
-
-      def world
-        PgDiff::World[origin]
       end
 
       def to_s; @data; end

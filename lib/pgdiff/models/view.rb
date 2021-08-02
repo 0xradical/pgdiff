@@ -3,14 +3,13 @@ module PgDiff
     class View < Base
       attr_reader :privileges
 
-      def initialize(data, materialized = false)
+      def initialize(data)
         super(data)
-        @materialized = materialized
         @privileges = []
       end
 
       def materialized?
-        !!@materialized
+        @data['viewtype'] == 'MATERIALIZED'
       end
 
       def name
@@ -26,12 +25,6 @@ module PgDiff
           #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name}
           #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
         }
-      end
-
-      def each
-        [ privileges ].each do |dependency|
-          dependency.each { |d| yield d }
-        end
       end
 
       def add_privileges(data)

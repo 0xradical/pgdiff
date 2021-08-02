@@ -1,6 +1,10 @@
 module PgDiff
   module Models
     class Schema < Base
+      def initialize(data)
+        super(data)
+      end
+
       def name
         nspname
       end

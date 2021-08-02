@@ -24,13 +24,6 @@ module PgDiff
         "TABLE"
       end
 
-
-      def each
-        [ columns, constraints, indexes, options, privileges ].each do |dependency|
-          dependency.each { |d| yield d }
-        end
-      end
-
       def to_s
         %Q{
           TABLE #{name}

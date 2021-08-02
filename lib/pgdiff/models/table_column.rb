@@ -21,7 +21,11 @@ module PgDiff
       end
 
       def type
-        "#{nspname == 'pg_catalog' ? '' : nspname + '.'}#{typname}"
+        if typname =~ /\A#{nspname}\./
+          typname
+        else
+          "#{nspname == 'pg_catalog' ? '' : nspname + '.'}#{typname}"
+        end
       end
 
       def not_null

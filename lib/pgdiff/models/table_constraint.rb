@@ -29,6 +29,10 @@ module PgDiff
         }.fetch(contype, "UNKNOWN")
       end
 
+      def gid
+        "TABLE CONSTRAINT #{name} ON #{table.name}"
+      end
+
       def to_s
         "TABLE CONSTRAINT #{name} #{type} #{definition}"
       end

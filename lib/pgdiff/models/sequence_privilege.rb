@@ -12,14 +12,6 @@ module PgDiff
       def initialize(data, sequence)
         super(data)
         @sequence = sequence
-
-        world.add_dependency(
-          PgDiff::Dependency.new(
-            self,
-            world.roles[user],
-            "internal"
-          )
-        )
       end
 
       def name

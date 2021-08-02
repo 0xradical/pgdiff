@@ -1,6 +1,6 @@
 module PgDiff
   class Database
-    attr_reader :catalog, :world
+    attr_reader :catalog, :world, :queries
 
     def initialize(label, dbparams = {})
       @label = label
@@ -30,30 +30,86 @@ module PgDiff
 
     def connection; @pg; end
 
+    def build_object(objdata, objclass)
+      case objclass
+      when Models::Table
+        objclass.new(objdata).tap do |table|
+          table.add_columns(@queries.table_columns(table.name))
+          table.add_constraints(@queries.table_constraints(table.name))
+          table.add_indexes(@queries.table_indexes(table.name))
+          table.add_options(@queries.table_options(table.name))
+          table.add_privileges(@queries.table_privileges(table.name))
+        end
+      when Models::View
+        objclass.new(objdata).tap do |view|
+          view.add_privileges(
+            view.materialized? ?  @queries.materialized_view_privileges(view.name) :
+                                  @queries.view_privileges(view.name)
+          )
+        end
+      when Models::Function
+        objclass.new(objdata).tap do |function|
+          function.add_privileges(@queries.function_privileges(function.name, function.argtypes))
+        end
+      when Models::Sequence
+        objclass.new(objdata).tap do |sequence|
+          sequence.add_privileges(@queries.sequence_privileges(sequence.name))
+        end
+      when Models::Domain
+        objclass.new(objdata).tap do |domain|
+          domain.add_constraints(@queries.domain_constraints(domain.name))
+        end
+      else
+        objclass.new(objdata)
+      end
+    end
+
     def setup
       @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
       @catalog ||= PgDiff::Catalog.new(@pg, @label)
+      @queries ||= PgDiff::Queries.new(@pg)
 
-      PgDiff::Queries.new(@pg).dependency_pairs.each do |dep|
-        object = @world.objects[dep["objid"]]
+      @queries.dependency_pairs.each do |dep|
+        objdata  = @world.objects[dep["objid"]]
 
-        if !object
-          object = PgDiff::Models::Unmapped.new(dep["objid"], dep["object_identity"], dep["object_type"])
+        object = case objdata
+        when Hash
+          objclass = @world.classes[dep["objid"]]
+          @world.objects[dep["objid"]] = build_object(objdata, objclass)
+        when NilClass
+          @world.classes[dep["objid"]] = Models::Unmapped
+          @world.objects[dep["objid"]] = PgDiff::Models::Unmapped.new(dep["objid"], dep["object_identity"], dep["object_type"], @label)
+        else
+          objdata
         end
 
-        referenced = @world.objects[dep["refobjid"]]
+        chain    = (JSON.parse(dep["dependency_chain"]) rescue [])
+        # chain[-1] == object
+        refobjid = chain[-2]
 
-        if !referenced
-          referenced = PgDiff::Models::Unmapped.new(dep["refobjid"], dep["refobj_identity"], dep["refobj_type"])
-        end
+        if refobjid
+          referenced = @world.objects[refobjid]
 
-        @world.add_dependency(
-          PgDiff::Dependency.new(
-            object,
-            referenced,
-            dep["dependency_type"]
+          @world.add_dependency(
+            PgDiff::Dependency.new(
+              object,
+              referenced,
+              dep["dependency_type"]
+            )
           )
-        )
+        end
+      end
+
+      # objects that do not appear on dependency pairs
+      @world.objects.select do |id,o|
+        o.is_a?(Hash)
+      end.each do |id,o|
+        objdata  = o
+        objclass = @world.classes[id]
+
+        if objdata
+          @world.objects[id] = build_object(objdata, objclass)
+        end
       end
     end
   end

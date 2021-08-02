@@ -4,68 +4,54 @@ module PgDiff
 
     attr_reader :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums, :custom_types, :extensions, :triggers
+                :domains, :enums, :types, :extensions, :triggers
 
     def initialize(connection, label = "unknown")
       @connection = connection
       @query = PgDiff::Queries.new(connection, label)
+      @world = PgDiff::World[label]
       collect_objects!
     end
 
     def collect_objects!
-      @roles = @query.roles.map do |data|
-        Models::Role.new(data)
+      @query.roles.each do |data|
+        @world.add_object(data, Models::Role)
       end
-      @schemas = @query.schemas.map do |data|
-        Models::Schema.new(data)
+      @query.schemas.each do |data|
+        @world.add_object(data, Models::Schema)
       end
-      @extensions = @query.extensions.map do |data|
-        Models::Extension.new(data)
+      @query.extensions.each do |data|
+        @world.add_object(data, Models::Extension)
       end
-      @tables = @query.tables.map do |data|
-        Models::Table.new(data).tap do |table|
-          table.add_columns(@query.table_columns(table.name))
-          table.add_constraints(@query.table_constraints(table.name))
-          table.add_indexes(@query.table_indexes(table.name))
-          table.add_options(@query.table_options(table.name))
-          table.add_privileges(@query.table_privileges(table.name))
-        end
+      @query.tables.map do |data|
+        @world.add_object(data, Models::Table)
       end
-      @views = @query.views.map do |data|
-        Models::View.new(data, false).tap do |view|
-          view.add_privileges(@query.view_privileges(view.name))
-        end
-      end + @query.materialized_views.map do |data|
-        Models::View.new(data, true).tap do |view|
-          view.add_privileges(@query.materialized_view_privileges(view.name))
-        end
+      @query.views.map do |data|
+        @world.add_object(data, Models::View)
       end
-      @functions = @query.functions.map do |data|
-        Models::Function.new(data).tap do |function|
-          function.add_privileges(@query.function_privileges(function.name, function.argtypes))
-        end
+      @query.materialized_views.map do |data|
+        @world.add_object(data, Models::View)
       end
-      @aggregates = @query.aggregates.map do |data|
-        Models::Aggregate.new(data)
+      @query.functions.map do |data|
+        @world.add_object(data, Models::Function)
       end
-      @sequences = @query.sequences.map do |data|
-        Models::Sequence.new(data).tap do |sequence|
-          sequence.add_privileges(@query.sequence_privileges(sequence.name))
-        end
+      @query.aggregates.map do |data|
+        @world.add_object(data, Models::Aggregate)
       end
-      @enums = @query.enums.map do |data|
-        Models::Enum.new(data)
+      @query.sequences.map do |data|
+        @world.add_object(data, Models::Sequence)
       end
-      @domains = @query.domains.map do |data|
-        Models::Domain.new(data).tap do |domain|
-          domain.add_constraints(@query.domain_constraints(domain.name))
-        end
+      @query.enums.map do |data|
+        @world.add_object(data, Models::Enum)
       end
-      @custom_types = @query.custom_types.map do |data|
-        Models::CustomType.new(data)
+      @query.domains.map do |data|
+        @world.add_object(data, Models::Domain)
       end
-      @triggers = @query.triggers.map do |data|
-        Models::Trigger.new(data)
+      @query.types.map do |data|
+        @world.add_object(data, Models::Type)
+      end
+      @query.triggers.map do |data|
+        @world.add_object(data, Models::Trigger)
       end
     end
 
@@ -73,7 +59,7 @@ module PgDiff
     def each_object(deep: true)
       [
         @roles, @schemas, @extensions, @enums,
-        @domains, @custom_types, @aggregates, @tables,
+        @domains, @types, @aggregates, @tables,
         @views, @functions, @sequences, @triggers
       ].each do |family|
         family.each do |parent|

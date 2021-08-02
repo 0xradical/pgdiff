@@ -3,26 +3,6 @@ module PgDiff
     class CustomType < Base
       def initialize(data)
         super(data)
-        # add dependencies artificially :/
-        columns.each do |column|
-          if !world.objects[column['objid']]
-            world.add_object(
-              PgDiff::Models::Type.new({
-                "objid" => column['objid'],
-                "type" => column['type'],
-                "identity" => column["identity"]
-              })
-            )
-          end
-
-          world.add_dependency(
-            PgDiff::Dependency.new(
-              self,
-              world.objects[column['objid']],
-              "internal"
-            )
-          )
-        end
       end
 
       def world_type

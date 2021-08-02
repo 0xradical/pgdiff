@@ -6,14 +6,6 @@ module PgDiff
       def initialize(data, function)
         super(data)
         @function = function
-
-        world.add_dependency(
-          PgDiff::Dependency.new(
-            self,
-            world.roles[user],
-            "internal"
-          )
-        )
       end
 
       def name

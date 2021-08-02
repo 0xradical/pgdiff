@@ -33,6 +33,7 @@ require_relative "pgdiff/catalog.rb"
 require_relative "pgdiff/object.rb"
 require_relative "pgdiff/dependency.rb"
 require_relative "pgdiff/dependencies.rb"
+require_relative "pgdiff/dependency_tree.rb"
 require_relative "pgdiff/database.rb"
 require_relative "pgdiff/diff.rb"
 

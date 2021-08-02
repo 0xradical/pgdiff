@@ -9,18 +9,27 @@ module PgDiff
       @@worlds[id]
     end
 
-    attr_reader :objects, :dependencies, :roles
-
-    def initialize
-      @objects = Hash.new
-      @dependencies = Hash.new
-      @roles = Hash.new
+    def self.method_missing(n)
+      self[n.to_s]
     end
 
-    def add_object(object, id = nil)
-      _id = id || object.objid
-      raise "ID cannot be Nil: #{object.name} does not have objid" if _id.nil?
-      @objects[_id] = object
+    attr_reader :objects, :classes, :dependencies, :roles, :schemas
+
+    def initialize
+      @objects      = Hash.new
+      @classes      = Hash.new
+      @dependencies = Hash.new
+      @roles        = Hash.new
+      @schemas      = Hash.new
+    end
+
+    # bag of objects coming from catalog
+    # that will be used when querying dependencies
+    def add_object(data, klass)
+      if data["objid"]
+        @objects[data["objid"]] = data
+        @classes[data["objid"]] = klass
+      end
     end
 
     def add_dependency(dependency)
@@ -29,6 +38,10 @@ module PgDiff
 
     def add_role(role)
       @roles[role.name] ||= role
+    end
+
+    def add_schema(schema)
+      @schemas[schema.name] ||= schema
     end
   end
 end

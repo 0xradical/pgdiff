@@ -206,7 +206,7 @@ module PgDiff
 
     def views(schemas = self.schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT schemaname, viewname, viewowner, definition,
+        SELECT schemaname, viewname, viewowner, definition, 'VIRTUAL' AS viewtype,
         (pg_identify_object('pg_class'::regclass, c.oid, 0)).identity,
         c.oid as objid,
         '#{label}' AS origin
@@ -242,6 +242,7 @@ module PgDiff
     def materialized_views(schemas = self.schemas.map{|row| row["nspname"] })
       query(%Q{
         SELECT schemaname, matviewname AS viewname, matviewowner AS viewowner, definition,
+        'MATERIALIZED' AS viewtype,
         (pg_identify_object('pg_class'::regclass, c.oid, 0)).identity,
         c.oid as objid,
         '#{label}' AS origin
@@ -448,7 +449,6 @@ module PgDiff
         WHERE
           t.typtype = 'e'
           AND e.objid IS NULL
-          AND n.nspname IN ('#{schemas.join("','")}')
         ORDER BY 1, 2;
       })
     end
@@ -477,8 +477,7 @@ module PgDiff
               '#{label}' AS origin
         FROM pg_catalog.pg_type t
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-        WHERE n.nspname IN ('#{schemas.join("','")}')
-            AND t.typtype = 'd'
+        WHERE t.typtype = 'd'
             AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
             AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
             AND t.oid not in (select * from extension_oids)
@@ -517,7 +516,7 @@ module PgDiff
       })
     end
 
-    def custom_types(schemas = self.schemas.map{|row| row["nspname"] })
+    def types(schemas = self.schemas.map{|row| row["nspname"] })
       query(%Q{
         with extension_oids as (
           select
@@ -528,11 +527,12 @@ module PgDiff
               d.refclassid = 'pg_extension'::regclass and
               d.classid = 'pg_type'::regclass
         )
-
         SELECT
           n.nspname AS schema,
           pg_catalog.format_type (t.oid, NULL) AS name,
           t.typname AS internal_name,
+          t.typtype AS type,
+          t.typcategory AS category,
           CASE
             WHEN t.typrelid != 0
               THEN CAST ( 'tuple' AS pg_catalog.text )
@@ -572,14 +572,7 @@ module PgDiff
               WHERE c.oid = t.typrelid
           )
         )
-        AND NOT EXISTS (
-          SELECT 1
-            FROM pg_catalog.pg_type el
-            WHERE el.oid = t.typelem
-            AND el.typarray = t.oid
-        )
-        AND n.nspname IN ('#{schemas.join("','")}')
-        and t.typcategory = 'C'
+        and t.typtype NOT IN ('e', 'd')
         and t.oid not in (select * from extension_oids)
         ORDER BY 1, 2;
       })
@@ -624,46 +617,80 @@ module PgDiff
     # From https://wiki.postgresql.org/wiki/Pg_depend_display
     def dependency_pairs
       query(%Q{
-        WITH preference AS (
+        WITH recursive preference AS (
           SELECT 10 AS max_depth
             , 16384 AS min_oid -- user objects only
             , '^(londiste|pgq|pg_toast|pg_catalog)'::text AS schema_exclusion
             , '^pg_(conversion|language|ts_(dict|template))'::text AS class_exclusion
+        ),
+        dependency_pair AS (
+          SELECT distinct on (objid, refobjid) objid
+            , array_agg(objsubid ORDER BY objsubid) AS objsubids
+            , upper(obj.type) AS object_type
+            , coalesce(obj.schema, substring(obj.identity, E'(\\w+?)\\.'), '') AS object_schema
+            , obj.name AS object_name
+            , obj.identity AS object_identity
+            , refobjid
+            , array_agg(refobjsubid ORDER BY refobjsubid) AS refobjsubids
+            , upper(refobj.type) AS refobj_type
+            , coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
+                                                      ELSE refobj.schema END
+                , substring(refobj.identity, E'(\\w+?)\\.'), '') AS refobj_schema
+            , refobj.name AS refobj_name
+            , refobj.identity AS refobj_identity
+            , CASE deptype
+                  WHEN 'n' THEN 'normal'
+                  WHEN 'a' THEN 'automatic'
+                  WHEN 'i' THEN 'internal'
+                  WHEN 'e' THEN 'extension'
+                  WHEN 'p' THEN 'pinned'
+              END AS dependency_type
+          FROM pg_depend dep
+            , LATERAL pg_identify_object(classid, objid, 0) AS obj
+            , LATERAL pg_identify_object(refclassid, refobjid, 0) AS refobj
+            , preference
+          WHERE deptype = ANY('{n,a,i,e,p}')
+          AND objid >= preference.min_oid
+          AND (refobjid >= preference.min_oid OR refobjid = 2200) -- need public schema as root node
+          AND coalesce(obj.schema, substring(obj.identity, E'(\\w+?)\\.'), '') !~ preference.schema_exclusion
+          AND coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
+                                                      ELSE refobj.schema END
+                , substring(refobj.identity, E'(\\w+?)\\.'), '') !~ preference.schema_exclusion
+          GROUP BY objid, obj.type, obj.schema, obj.name, obj.identity
+            , refobjid, refobj.type, refobj.schema, refobj.name, refobj.identity, deptype
         )
-            SELECT distinct on (objid, refobjid) objid
-              , array_agg(objsubid ORDER BY objsubid) AS objsubids
-              , upper(obj.type) AS object_type
-              , coalesce(obj.schema, substring(obj.identity, E'(\\w+?)\\.'), '') AS object_schema
-              , obj.name AS object_name
-              , obj.identity AS object_identity
-              , refobjid
-              , array_agg(refobjsubid ORDER BY refobjsubid) AS refobjsubids
-              , upper(refobj.type) AS refobj_type
-              , coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
-                                                        ELSE refobj.schema END
-                  , substring(refobj.identity, E'(\\w+?)\\.'), '') AS refobj_schema
-              , refobj.name AS refobj_name
-              , refobj.identity AS refobj_identity
-              , CASE deptype
-                    WHEN 'n' THEN 'normal'
-                    WHEN 'a' THEN 'automatic'
-                    WHEN 'i' THEN 'internal'
-                    WHEN 'e' THEN 'extension'
-                    WHEN 'p' THEN 'pinned'
-                END AS dependency_type
-            FROM pg_depend dep
-              , LATERAL pg_identify_object(classid, objid, 0) AS obj
-              , LATERAL pg_identify_object(refclassid, refobjid, 0) AS refobj
-              , preference
-            WHERE deptype = ANY('{n,a,i,e,p}')
-            AND objid >= preference.min_oid
-            AND (refobjid >= preference.min_oid OR refobjid = 2200) -- need public schema as root node
-            AND coalesce(obj.schema, substring(obj.identity, E'(\\w+?)\\.'), '') !~ preference.schema_exclusion
-            AND coalesce(CASE WHEN refobj.type='schema' THEN refobj.identity
-                                                        ELSE refobj.schema END
-                  , substring(refobj.identity, E'(\\w+?)\\.'), '') !~ preference.schema_exclusion
-            GROUP BY objid, obj.type, obj.schema, obj.name, obj.identity
-              , refobjid, refobj.type, refobj.schema, refobj.name, refobj.identity, deptype;
+        , dependency_hierarchy AS (
+          SELECT DISTINCT
+              0 AS level,
+              refobjid AS objid,
+              refobj_type AS object_type,
+              refobj_identity AS object_identity,
+              NULL::text AS dependency_type,
+              ARRAY[refobjid] AS dependency_chain
+          FROM dependency_pair root
+          , preference
+          WHERE NOT EXISTS
+             (SELECT 'x' FROM dependency_pair branch WHERE branch.objid = root.refobjid)
+          AND refobj_schema !~ preference.schema_exclusion
+          UNION ALL
+          SELECT
+              level + 1 AS level,
+              child.objid,
+              child.object_type,
+              child.object_identity,
+              child.dependency_type,
+              parent.dependency_chain || child.objid
+          FROM dependency_pair child
+          JOIN dependency_hierarchy parent ON (parent.objid = child.refobjid)
+          , preference
+          WHERE level < preference.max_depth
+          AND child.object_schema !~ preference.schema_exclusion
+          AND child.refobj_schema !~ preference.schema_exclusion
+          AND NOT (child.objid = ANY(parent.dependency_chain))
+      )
+      SELECT level, objid, object_type, object_identity, dependency_type, to_json(dependency_chain::text[]) AS dependency_chain FROM dependency_hierarchy
+      where level <= 1
+      ORDER BY level, objid;
       })
     end
 
