@@ -12,6 +12,13 @@ module PgDiff
       def initialize(data, sequence)
         super(data)
         @sequence = sequence
+        world.add_dependency(
+          PgDiff::Dependency.new(
+            self,
+            sequence,
+            "oncreate"
+          )
+        )
       end
 
       def name

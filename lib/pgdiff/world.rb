@@ -16,7 +16,8 @@ module PgDiff
     attr_reader :objects, :classes, :dependencies,
                 :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums, :types, :extensions, :triggers
+                :domains, :enums, :types, :extensions, :triggers,
+                :indexes, :constraints
 
     def initialize
       @objects      = Hash.new
@@ -35,6 +36,8 @@ module PgDiff
       @extensions   = Hash.new
       @triggers     = Hash.new
       @unmapped     = Hash.new
+      @constraints  = Hash.new
+      @indexes      = Hash.new
     end
 
     # bag of objects coming from catalog
@@ -81,6 +84,15 @@ module PgDiff
     end
     def add_extension(extension)
       @extensions[extension.name] ||= extension
+    end
+    def add_trigger(trigger)
+      @triggers[trigger.name] ||= trigger
+    end
+    def add_tableindex(index)
+      @indexes[index.name] ||= index
+    end
+    def add_tableconstraint(constraint)
+      @constraints[constraint.name] ||= constraint
     end
     def add_trigger(trigger)
       @triggers[trigger.name] ||= trigger

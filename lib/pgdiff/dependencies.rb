@@ -20,6 +20,10 @@ module PgDiff
     # automatic:
     #   obj can be dropped without affecting ref
     #   ref can be dropped (objs will be automatically dropped)
+    # oncreate:
+    #   obj can be dropped without affecting ref
+    #   ref can be dropped (objs will be automatically dropped)
+    #   obj must be created on ref creation
     def by_type(type)
       self.class.new(object, @set.select{|dep| dep.type == type})
     end
@@ -34,6 +38,10 @@ module PgDiff
 
     def internal
       self.class.new(object, by_type("internal").set)
+    end
+
+    def oncreate
+      self.class.new(object, by_type("oncreate").set)
     end
 
     def i_depend_on

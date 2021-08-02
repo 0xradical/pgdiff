@@ -34,12 +34,37 @@ module PgDiff
       case objclass.name
       when "PgDiff::Models::Table"
         objclass.new(objdata).tap do |table|
+          # columns are instrinsically connected to database and don't need
+          # to be represented as a dependency
           table.add_columns(@queries.table_columns(table.name))
-          table.add_constraints(@queries.table_constraints(table.name))
-          table.add_indexes(@queries.table_indexes(table.name))
           table.add_options(@queries.table_options(table.name))
+
+          # privileges are virtual (don't have oids)
+          # they are "dropped" when tables are dropped
+          # but should be created (GRANT / REVOKE) explicitly when tables are created
+          # they are marked as a oncreate dependency
           table.add_privileges(@queries.table_privileges(table.name))
+
+          # only constraints and indexes have objid
+          # so they should be added to world
+          tconstraints = @queries.table_constraints(table.name)
+          tindexes = @queries.table_indexes(table.name)
+
+          tconstraints.each do |tc|
+            @world.objects[tc["objid"]] = [tc,table]
+            @world.classes[tc["objid"]] = PgDiff::Models::TableConstraint
+          end
+
+          tindexes.each do |ti|
+            @world.objects[ti["objid"]] = [ti,table]
+            @world.classes[ti["objid"]] = PgDiff::Models::TableIndex
+          end
+
+          table.add_constraints(tconstraints)
+          table.add_indexes(tindexes)
         end
+      when "PgDiff::Models::TableConstraint", "PgDiff::Models::TableIndex"
+        objclass.new(objdata[0], objdata[1])
       when "PgDiff::Models::View"
         objclass.new(objdata).tap do |view|
           view.add_privileges(
@@ -67,13 +92,13 @@ module PgDiff
     def setup
       @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
       @catalog ||= PgDiff::Catalog.new(@pg, @label)
-      @queries ||= PgDiff::Queries.new(@pg)
+      @queries ||= PgDiff::Queries.new(@pg, @label)
 
       @queries.dependency_pairs.each do |dep|
         objdata  = @world.objects[dep["objid"]]
 
         object = case objdata
-        when Hash
+        when Hash, Array
           objclass = @world.classes[dep["objid"]]
           @world.objects[dep["objid"]] = build_object(objdata, objclass)
         when NilClass

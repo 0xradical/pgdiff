@@ -6,6 +6,14 @@ module PgDiff
       def initialize(data, function)
         super(data)
         @function = function
+
+        world.add_dependency(
+          PgDiff::Dependency.new(
+            self,
+            function,
+            "oncreate"
+          )
+        )
       end
 
       def name
