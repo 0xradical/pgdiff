@@ -32,6 +32,8 @@ module PgDiff
       end
 
       def add
+        return "" if from_extension == "t"
+
         %Q{CREATE DOMAIN #{name} AS #{data_type};\n} +
         constraints.map do |constraint|
           constraint.add

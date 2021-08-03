@@ -449,6 +449,7 @@ module PgDiff
           ) AS elements,
           (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity,
           t.oid as objid,
+          (t.oid in (select * from extension_oids)) as from_extension,
           '#{label}' AS origin
         FROM pg_catalog.pg_type t
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -482,6 +483,7 @@ module PgDiff
               t.typdefault as "default",
               (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity,
               t.oid as objid,
+              (t.oid in (select * from extension_oids)) as from_extension,
               '#{label}' AS origin
         FROM pg_catalog.pg_type t
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -565,6 +567,7 @@ module PgDiff
           ))) as columns,
           (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity,
           t.oid as objid,
+          (t.oid in (select * from extension_oids)) as from_extension,
           '#{label}' AS origin
         FROM
           pg_catalog.pg_type t
@@ -607,6 +610,7 @@ module PgDiff
             tg.oid in (select * from extension_oids) as extension_owned,
             (pg_identify_object('pg_trigger'::regclass, tg.oid, 0)).identity,
             tg.oid as objid,
+            (tg.oid in (select * from extension_oids)) as from_extension,
             '#{label}' AS origin
         from pg_trigger tg
         join pg_class cls on cls.oid = tg.tgrelid
