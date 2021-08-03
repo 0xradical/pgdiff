@@ -160,7 +160,6 @@ module PgDiff
       @world.tables.values.each do |table|
         table.columns.each do |column|
           type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
-          binding.pry if type.nil?
           @world.add_dependency(
             PgDiff::Dependency.new(
               table,
@@ -203,6 +202,24 @@ module PgDiff
               "normal"
             )
           )
+        end
+
+        # conbin (CHECK) might have function calls...
+        # :funcid 1381 :funcresulttype 23
+        if constraint.conbin
+          constraint.conbin.scan(/:funcid (\d+)/).each do |scanr|
+            function = @world.objects[scanr[0]]
+
+            if function
+              @world.add_dependency(
+                PgDiff::Dependency.new(
+                  table,
+                  function,
+                  "normal"
+                )
+              )
+            end
+          end
         end
       end
 

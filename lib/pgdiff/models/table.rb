@@ -77,7 +77,7 @@ module PgDiff
           columns.map do |column|
             "    " + column.add
           end,
-          constraints.map do |constraint|
+          constraints.select{|c| c.contype != "t" }.map do |constraint|
             "    " + constraint.indexdef
           end
         ].flatten.join(",\n") +
