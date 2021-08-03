@@ -13,6 +13,10 @@ module PgDiff
         gid
       end
 
+      def ops
+        JSON.parse(@data['ops'])
+      end
+
       def add
         ""
       end

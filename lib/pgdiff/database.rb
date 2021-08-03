@@ -112,12 +112,6 @@ module PgDiff
           @world.gids[@world.objects[dep["objid"]].gid] = dep["objid"]
           @world.objects[dep["objid"]]
         else
-          # we're talking about a column
-          # objdata already exists and it's already a composite type or a table
-          # if dep["objsubid"].to_i > 0
-          #   @subids << dep
-          # end
-
           objdata
         end
 
@@ -229,15 +223,28 @@ module PgDiff
       # views have dependencies mapped outside pg_depend
       puts "Adding views dependencies on #{@label} ..."
       @world.rules.values.each do |rule|
-        view = @world.find_by_gid("VIEW #{rule.viewname}")
-        if view
-          @world.add_dependency(
-            PgDiff::Dependency.new(
-              view,
-              rule,
-              "internal"
+        rule.ops.each do |op|
+          view = @world.find_by_gid("VIEW #{op['viewname']}")
+          if view
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                view,
+                rule,
+                "internal"
+              )
             )
-          )
+          end
+          # if rule depends on another view lol
+          oview = @world.find_by_gid("VIEW #{op['schemaname']}.#{op['tablename']}")
+          if oview
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                view,
+                oview,
+                "internal"
+              )
+            )
+          end
         end
       end
 

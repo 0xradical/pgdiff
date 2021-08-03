@@ -273,19 +273,25 @@ module PgDiff
     def view_dependencies
 
       query(%Q{
-        SELECT distinct
-        n.nspname AS schemaname,
-        c.relname AS tablename,
-        a.attname AS columnname,
+        SELECT
         r.oid AS objid,
+        jsonb_agg(
+          jsonb_build_object(
+            'schemaname',  n.nspname,
+            'tablename', c.relname,
+            'columnname', a.attname,
+            'rtype', (CASE r.ev_type WHEN '1' THEN 'SELECT' WHEN '2' THEN 'UPDATE' WHEN '3' THEN 'INSERT' ELSE 'DELETE' END),
+            'viewname', (pg_identify_object('pg_class'::regclass, r.ev_class, 0)).identity
+          )
+        ) AS ops,
         (pg_identify_object('pg_rewrite'::regclass, r.oid, 0)).identity AS identity,
-        (pg_identify_object('pg_class'::regclass, r.ev_class, 0)).identity AS viewname,
         '#{label}' AS origin
         FROM pg_rewrite AS r
         INNER JOIN pg_depend AS d ON r.oid=d.objid
         INNER JOIN pg_attribute a ON a.attnum = d.refobjsubid AND a.attrelid = d.refobjid AND a.attisdropped = false
         INNER JOIN pg_class c ON c.oid = d.refobjid
-        INNER JOIN pg_namespace n ON n.oid = c.relnamespace;
+        INNER JOIN pg_namespace n ON n.oid = c.relnamespace
+        GROUP BY r.oid;
       })
     end
 
