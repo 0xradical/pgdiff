@@ -152,6 +152,7 @@ module PgDiff
 
       # process columns because some types
       # don't appear on pg_depend ?
+      # also, their default types might be string based
       @world.tables.values.each do |table|
         table.columns.each do |column|
           type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
@@ -162,6 +163,21 @@ module PgDiff
               "normal"
             )
           )
+
+          if column.adsrc
+            # is adsrc a function ?
+            function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc)}/}.first
+            if function
+              column.default_value_fn = "#{function.name}()"
+              @world.add_dependency(
+                PgDiff::Dependency.new(
+                  table,
+                  function,
+                  "normal"
+                )
+              )
+            end
+          end
         end
       end
     end

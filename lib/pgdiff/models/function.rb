@@ -42,6 +42,8 @@ module PgDiff
       end
 
       def add
+        return "" if extension_function == "t"
+
         %Q{#{definition};\n} +
         privileges.map do |privilege|
           privilege.add

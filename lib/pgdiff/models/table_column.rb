@@ -2,6 +2,8 @@ module PgDiff
   module Models
     class TableColumn < Base
       attr_reader :table
+      # default_value_fn is set in a post-process step
+      attr_accessor :default_value_fn
 
       def initialize(data, table)
         super(data)
@@ -41,20 +43,12 @@ module PgDiff
       # representation of the default value.
       # Reverse-compiling the adbin field (with pg_get_expr for example) is a better way
       # to display the default value.
+      def default_value_text
+        adsrc
+      end
+
       def default_value
-        # adsrc
-        # it's probably a function
-        if adsrc =~ /\(\)/
-          # check schema presence...
-          if adsrc =~ /[^\.]+\./
-            adsrc
-          else
-            # assume public
-            "public.#{adsrc}"
-          end
-        else
-          adsrc
-        end
+        default_value_fn || default_value_text
       end
 
       # Code	Category

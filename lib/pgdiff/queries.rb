@@ -295,14 +295,15 @@ module PgDiff
         SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes,
         (pg_identify_object('pg_proc'::regclass, p.oid, 0)).identity,
         p.oid as objid,
-        '#{label}' AS origin
+        '#{label}' AS origin,
+        p."oid" IN (
+          SELECT d.objid
+          FROM pg_depend d
+          WHERE d.deptype = 'e'
+      ) AS extension_function
         FROM pg_proc p
         INNER JOIN pg_namespace n ON n.oid = p.pronamespace
-        WHERE n.nspname IN ('#{schemas.join("','")}') AND p.probin IS NULL AND p.prokind = 'f' AND p."oid" NOT IN (
-                    SELECT d.objid
-                    FROM pg_depend d
-                    WHERE d.deptype = 'e'
-                );
+        WHERE p.prokind in ('f','p');
       })
     end
 
