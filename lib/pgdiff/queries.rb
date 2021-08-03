@@ -281,13 +281,15 @@ module PgDiff
             'tablename', c.relname,
             'columnname', a.attname,
             'rtype', (CASE r.ev_type WHEN '1' THEN 'SELECT' WHEN '2' THEN 'UPDATE' WHEN '3' THEN 'INSERT' ELSE 'DELETE' END),
-            'viewname', (pg_identify_object('pg_class'::regclass, r.ev_class, 0)).identity
+            'viewname', (pg_identify_object('pg_class'::regclass, r.ev_class, 0)).identity,
+            'fobjid', fd.refobjid
           )
         ) AS ops,
         (pg_identify_object('pg_rewrite'::regclass, r.oid, 0)).identity AS identity,
         '#{label}' AS origin
         FROM pg_rewrite AS r
         INNER JOIN pg_depend AS d ON r.oid=d.objid
+        INNER JOIN pg_depend AS fd ON r.oid = fd.objid AND fd.refclassid = 'pg_proc'::regclass
         INNER JOIN pg_attribute a ON a.attnum = d.refobjsubid AND a.attrelid = d.refobjid AND a.attisdropped = false
         INNER JOIN pg_class c ON c.oid = d.refobjid
         INNER JOIN pg_namespace n ON n.oid = c.relnamespace

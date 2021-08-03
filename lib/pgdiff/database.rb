@@ -245,6 +245,17 @@ module PgDiff
               )
             )
           end
+          # if rule depends on another function
+          viewfn = @world.objects[op['fobjid']]
+          if viewfn
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                rule,
+                viewfn,
+                "internal"
+              )
+            )
+          end
         end
       end
 
