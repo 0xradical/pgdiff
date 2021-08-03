@@ -274,14 +274,12 @@ module PgDiff
       schema, view = schema_and_table(view_name)
 
       query(%Q{
-        SELECT
+        SELECT distinct
         n.nspname AS schemaname,
         c.relname AS tablename,
-        a.attname AS columnname,
         '#{label}' AS origin
         FROM pg_rewrite AS r
         INNER JOIN pg_depend AS d ON r.oid=d.objid
-        INNER JOIN pg_attribute a ON a.attnum = d.refobjsubid AND a.attrelid = d.refobjid AND a.attisdropped = false
         INNER JOIN pg_class c ON c.oid = d.refobjid
         INNER JOIN pg_namespace n ON n.oid = c.relnamespace
         INNER JOIN pg_namespace vn ON vn.nspname = '#{schema}'

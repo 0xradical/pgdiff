@@ -7,29 +7,52 @@ module PgDiff
     def initialize
       @common  = Hash.new(false)
       @added   = Hash.new(false)
-      @add     = Hash.new
+      @adding  = Hash.new(false)
+      @add     = Hash.new(false)
       @removed = Hash.new(false)
       @remove  = Hash.new
       @changed = Hash.new(false)
       @change  = Hash.new
     end
 
-    def _add(node)
-      return if @added[node.gid]
-      return if @common[node.gid]
+    def _priors(node, p = [], c = Set.new)
+      return if p.include?(node)
 
-      @added[node.gid] = true
+      c.add(p + [node])
 
       node.dependencies.i_depend_on.referenced.each do |dependency|
-        _add(dependency)
+        _priors(dependency, p + [node], c)
+      end
+    end
+
+    def priors(node)
+      p = []
+      c = Set.new
+      _priors(node, p, c)
+      parents = Hash.new
+
+      c.each do |chain|
+        0.upto(chain.length - 1) do |idx|
+          parents[chain[idx]] ||= Set.new
+          parents[chain[idx]]  = parents[chain[idx]] | Set.new(chain[idx..-1])
+        end
       end
 
-      @add[node.gid] = node
+      parents.each{|k,v| v.delete(k) }
 
-      # others that are internal are created automatically
-      node.dependencies.others_depend_on_me.normal.objects.each do |dependency|
-        _add(dependency)
+      parents.sort_by{|k,v| v.length}.map(&:first)
+    end
+
+    def _add(node)
+      return if @common[node.gid]
+      return if @add[node.gid]
+
+      priors(node).each do |prior|
+        @add[prior.gid] = true
+        _add(prior)
       end
+
+      @add[node.gid] = true
     end
 
     def _remove(node)

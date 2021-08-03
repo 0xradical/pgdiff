@@ -38,14 +38,14 @@ module PgDiff
       end
 
       def to_s
-        "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{name}(#{argtypes})"
+        "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{function.name}(#{function.argtypes})"
       end
 
       def add
         if execute == 't'
-          %Q{GRANT EXECUTE ON FUNCTION #{name}(#{argtypes}) TO "#{user}";}
+          %Q{GRANT EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) TO "#{user}";}
         else
-          %Q{REVOKE EXECUTE ON FUNCTION #{name}(#{argtypes}) FROM "#{user}";}
+          %Q{REVOKE EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) FROM "#{user}";}
         end
       end
     end

@@ -15,7 +15,7 @@ module PgDiff
         begin
           @pg = PG.connect(dbparams)
           if @retries > 0
-            print "Done"
+            puts "Done"
           end
           break
         rescue PG::ConnectionBad
@@ -91,10 +91,12 @@ module PgDiff
 
     def setup
       @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
+      puts "Cataloguing objects from database #{@label}..."
       @catalog ||= PgDiff::Catalog.new(@pg, @label)
       @queries ||= PgDiff::Queries.new(@pg, @label)
       @subids    = []
 
+      puts "Pulling in dependency pairs from #{@label}..."
       @queries.dependency_pairs.each do |dep|
         objdata  = @world.objects[dep["objid"]]
 
@@ -138,6 +140,7 @@ module PgDiff
 
       # objects that do not appear on dependency pairs
       # for some reason...
+      puts "Fixing objects that need manual dependency management on #{@label}..."
       @world.objects.select do |id,o|
         o.is_a?(Hash)
       end.each do |id,o|
@@ -177,6 +180,23 @@ module PgDiff
                 )
               )
             end
+          end
+        end
+      end
+
+      # views have dependencies mapped outside pg_depend
+      @world.views.values.each do |view|
+        @queries.view_dependencies(view.name).each do |dep|
+          table = @world.tables["#{dep['schemaname']}.#{dep['tablename']}"]
+
+          if table
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                view,
+                table,
+                "normal"
+              )
+            )
           end
         end
       end

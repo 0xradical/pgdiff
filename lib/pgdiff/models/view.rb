@@ -34,10 +34,9 @@ module PgDiff
       end
 
       def add
-        %Q{CREATE #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name} AS (\n} +
+        %Q{CREATE #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name} AS \n} +
         %Q{#{definition}} +
-        %Q{\n);} +
-        "\n" +
+        %Q{\n} +
         privileges.map do |privilege|
           privilege.add
         end.join("\n")
