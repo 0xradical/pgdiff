@@ -34,8 +34,8 @@ module PgDiff
   INCREMENT BY #{increment}
   MINVALUE #{minimum_value}
   MAXVALUE #{maximum_value}
-  START #{start_value}
-  CACHE #{cache_size} #{cycle_option == "f" ? 'NOCYCLE' : 'CYCLE'};\n
+  START WITH #{start_value}
+  CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};\n
         } +
         privileges.map do |privilege|
           privilege.add

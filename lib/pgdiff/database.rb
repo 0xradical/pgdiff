@@ -171,16 +171,19 @@ module PgDiff
 
           if column.adsrc
             # is adsrc a function ?
-            function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc)}/}.first
-            if function
-              column.default_value_fn = "#{function.name}()"
-              @world.add_dependency(
-                PgDiff::Dependency.new(
-                  table,
-                  function,
-                  "normal"
+            args = column.adsrc[/\((.*)\)/,1]
+            if args
+              function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc.sub("#{args})",''))}/}.first
+              if function
+                column.default_value_fn = "#{function.name}()"
+                @world.add_dependency(
+                  PgDiff::Dependency.new(
+                    table,
+                    function,
+                    "normal"
+                  )
                 )
-              )
+              end
             end
           end
         end
@@ -221,7 +224,7 @@ module PgDiff
         end
       end
 
-      puts "Addind sequence dependencies for tables on #{@label} ..."
+      puts "Adding sequence dependencies for tables on #{@label} ..."
       @world.sequences.values.each do |sequence|
         table = @world.find_by_gid("TABLE #{sequence.ownedby_table}")
 
