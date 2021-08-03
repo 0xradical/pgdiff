@@ -170,8 +170,9 @@ module PgDiff
 
           if column.adsrc
             # is adsrc a function ?
+            # ideally parse adbin for more complex cases...
             args = column.adsrc[/\((.*)\)/,1]
-            if args
+            if args && column.adsrc.sub("#{args})",'') !~ /^\(/
               function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc.sub("#{args})",''))}/}.first
               if function
                 column.default_value_fn = "#{function.name}(#{args})"
@@ -206,6 +207,8 @@ module PgDiff
 
         # conbin (CHECK) might have function calls...
         # :funcid 1381 :funcresulttype 23
+        # ideally, we have to grab every single thing that has an
+        # id and create a dependency...
         if constraint.conbin
           constraint.conbin.scan(/:funcid (\d+)/).each do |scanr|
             function = @world.objects[scanr[0]]
@@ -225,19 +228,16 @@ module PgDiff
 
       # views have dependencies mapped outside pg_depend
       puts "Adding views dependencies on #{@label} ..."
-      @world.views.values.each do |view|
-        @queries.view_dependencies(view.name).each do |dep|
-          table = @world.tables["#{dep['schemaname']}.#{dep['tablename']}"]
-
-          if table
-            @world.add_dependency(
-              PgDiff::Dependency.new(
-                view,
-                table,
-                "normal"
-              )
+      @world.rules.values.each do |rule|
+        view = @world.find_by_gid("VIEW #{rule.viewname}")
+        if view
+          @world.add_dependency(
+            PgDiff::Dependency.new(
+              view,
+              rule,
+              "internal"
             )
-          end
+          )
         end
       end
 

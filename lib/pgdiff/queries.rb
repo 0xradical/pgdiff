@@ -91,7 +91,7 @@ module PgDiff
     def table_columns(table_name)
       schema, table = schema_and_table(table_name)
 
-      query(%Q{SELECT a.attname, a.attnotnull, tn.nspname, (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity AS typname, t.oid as typeid, t.typcategory, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
+      query(%Q{SELECT a.attname, a.attnotnull, tn.nspname, (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity AS typname, t.oid as typeid, t.typcategory, ad.adbin, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
                   CASE
                       WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
                       WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
@@ -270,21 +270,22 @@ module PgDiff
       })
     end
 
-    def view_dependencies(view_name)
-      schema, view = schema_and_table(view_name)
+    def view_dependencies
 
       query(%Q{
         SELECT distinct
         n.nspname AS schemaname,
         c.relname AS tablename,
+        a.attname AS columnname,
+        r.oid AS objid,
+        (pg_identify_object('pg_rewrite'::regclass, r.oid, 0)).identity AS identity,
+        (pg_identify_object('pg_class'::regclass, r.ev_class, 0)).identity AS viewname,
         '#{label}' AS origin
         FROM pg_rewrite AS r
         INNER JOIN pg_depend AS d ON r.oid=d.objid
+        INNER JOIN pg_attribute a ON a.attnum = d.refobjsubid AND a.attrelid = d.refobjid AND a.attisdropped = false
         INNER JOIN pg_class c ON c.oid = d.refobjid
-        INNER JOIN pg_namespace n ON n.oid = c.relnamespace
-        INNER JOIN pg_namespace vn ON vn.nspname = '#{schema}'
-                INNER JOIN pg_class vc ON vc.relname = '#{view}' AND vc.relnamespace = vn."oid"
-        WHERE r.ev_class = vc.oid AND d.refobjid <> vc.oid;
+        INNER JOIN pg_namespace n ON n.oid = c.relnamespace;
       })
     end
 

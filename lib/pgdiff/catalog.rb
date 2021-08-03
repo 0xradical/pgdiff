@@ -22,6 +22,9 @@ module PgDiff
       @query.tables.map do |data|
         @world.add_object(data, Models::Table)
       end
+      @query.view_dependencies.map do |data|
+        @world.add_object(data, Models::Rule)
+      end
       @query.views.map do |data|
         @world.add_object(data, Models::View)
       end

@@ -17,7 +17,7 @@ module PgDiff
                 :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
                 :domains, :enums, :types, :extensions, :triggers,
-                :indexes, :constraints, :gids, :unmapped
+                :indexes, :constraints, :gids, :unmapped, :rules
 
     def initialize
       @objects      = Hash.new
@@ -39,6 +39,7 @@ module PgDiff
       @unmapped     = Hash.new
       @constraints  = Hash.new
       @indexes      = Hash.new
+      @rules        = Hash.new
     end
 
     # bag of objects coming from catalog
@@ -82,6 +83,9 @@ module PgDiff
     end
     def add_type(type)
       @types[type.name] ||= type
+    end
+    def add_rule(rule)
+      @rules[rule.name] ||= rule
     end
     def add_extension(extension)
       @extensions[extension.name] ||= extension
