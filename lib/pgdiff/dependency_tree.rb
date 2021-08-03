@@ -1,18 +1,11 @@
 module PgDiff
   class DependencyTree
-    attr_reader :add, :remove, :change,
-                :added, :removed, :changed,
-                :common
+    attr_reader :add, :remove, :change
 
     def initialize
-      @common  = Hash.new(false)
-      @added   = Hash.new(false)
-      @adding  = Hash.new(false)
       @add     = Hash.new(false)
-      @removed = Hash.new(false)
-      @remove  = Hash.new
-      @changed = Hash.new(false)
-      @change  = Hash.new
+      @remove  = Hash.new(false)
+      @change  = Hash.new(false)
     end
 
     def _priors(node, p = [], c = Set.new)
@@ -43,8 +36,63 @@ module PgDiff
       parents.sort_by{|k,v| v.length}.map(&:first)
     end
 
+    def _create_deps(node, p = [], c = Set.new)
+      return if p.include?(node)
+
+      c.add(p + [node])
+
+      node.dependencies.others_depend_on_me.oncreate.objects.each do |dependency|
+        _create_deps(dependency, p + [node], c)
+      end
+    end
+
+    def create_deps(node)
+      p = []
+      c = Set.new
+      _create_deps(node, p, c)
+      children = Hash.new
+
+      c.each do |chain|
+        0.upto(chain.length - 1) do |idx|
+          children[chain[idx]] ||= Set.new
+          children[chain[idx]]  = children[chain[idx]] | Set.new(chain[idx..-1])
+        end
+      end
+
+      children.each{|k,v| v.delete(k) }
+
+      children.sort_by{|k,v| v.length}.map(&:first)
+    end
+
+    def _remove_deps(node, p = [], c = Set.new)
+      return if p.include?(node)
+
+      c.add(p + [node])
+
+      node.dependencies.others_depend_on_me.internal.objects.each do |dependency|
+        _remove_deps(dependency, p + [node], c)
+      end
+    end
+
+    def remove_deps(node)
+      p = []
+      c = Set.new
+      _remove_deps(node, p, c)
+      children = Hash.new
+
+      c.each do |chain|
+        0.upto(chain.length - 1) do |idx|
+          children[chain[idx]] ||= Set.new
+          children[chain[idx]]  = children[chain[idx]] | Set.new(chain[idx..-1])
+        end
+      end
+
+      children.each{|k,v| v.delete(k) }
+
+      children.sort_by{|k,v| v.length}.map(&:first)
+    end
+
     def _add(node)
-      return if @common[node.gid]
       return if @add[node.gid]
 
       priors(node).each do |prior|
@@ -53,34 +101,29 @@ module PgDiff
       end
 
       @add[node.gid] = true
+
+      create_deps(node).each do |dep|
+        @add[dep.gid] = true
+        _add(dep)
+      end
     end
 
     def _remove(node)
-      return if @removed[node.gid]
-      return if @common[node.gid]
+      return if @remove[node.gid]
 
-      @removed[node.gid] = true
-
-      node.dependencies.others_depend_on_me.internal.objects.each do |dependency|
-        _remove(node)
+      remove_deps(node).each do |prior|
+        @remove[prior.gid] = true
+        _remove(prior)
       end
 
-      node.dependencies.others_depend_on_me.normal.objects.each do |dependency|
-        _remove(node)
-      end
-
-      @remove[node.gid] = node
+      @remove[node.gid] = true
     end
 
     def diff(source, target)
-      # objects in common
-      source.objects.values.select do |object|
-        if (tobject = target.find(object)) && (tobject.to_s == object.to_s)
-          @common[object.gid] = true
-        end
-      end
-
       # Add these
+      puts "Initiating diff"
+
+      puts "Fetching objects that should be added"
       source.objects.values.select do |object|
         if !target.find(object)
           _add(object)
@@ -88,6 +131,7 @@ module PgDiff
       end
 
       # Remove these
+      puts "Fetching objects that should be removed"
       target.objects.values.select do |object|
         if !source.find(object)
           _remove(object)
@@ -100,6 +144,23 @@ module PgDiff
 
       #   end
       # end
+
+      PgDiff::Diff.new(self, source, target) unless conflict?(source, target)
+    end
+
+    def conflict?(source, target)
+      common = Set.new(source.objects.values.map(&:gid)) & Set.new(target.objects.values.map(&:gid))
+
+      # Don't add common objects
+      common.to_a.each{|c| @add.delete(c) }
+
+      raise "Objects cannot be added and removed" if (Set.new(add.keys) & Set.new(remove.keys)).count > 0
+      raise "Common objects cannot be added"  if (Set.new(add.keys) & common).count > 0
+      raise "Common objects cannot be removed" if (Set.new(remove.keys) & common).count > 0
+      raise "Objects cannot be added and changed" if (Set.new(add.keys) & Set.new(change.keys)).count > 0
+      raise "Objects cannot be removed and changed" if (Set.new(remove.keys) & Set.new(change.keys)).count > 0
+
+      false
     end
   end
 end

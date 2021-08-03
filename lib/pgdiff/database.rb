@@ -156,6 +156,7 @@ module PgDiff
       # process columns because some types
       # don't appear on pg_depend ?
       # also, their default types might be string based
+      puts "Adding table columns dependencies on #{@label} ..."
       @world.tables.values.each do |table|
         table.columns.each do |column|
           type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
@@ -185,6 +186,7 @@ module PgDiff
       end
 
       # views have dependencies mapped outside pg_depend
+      puts "Adding views dependencies on #{@label} ..."
       @world.views.values.each do |view|
         @queries.view_dependencies(view.name).each do |dep|
           table = @world.tables["#{dep['schemaname']}.#{dep['tablename']}"]

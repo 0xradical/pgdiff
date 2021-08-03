@@ -38,31 +38,7 @@ require_relative "pgdiff/database.rb"
 require_relative "pgdiff/diff.rb"
 
 def PgDiff.compare(source, target)
-  sql  = ""
   tree = PgDiff::DependencyTree.new
-  tree.diff(source, target)
-
-  # check for inconsistencies
-  if (
-      Set.new(tree.removed.keys) &
-      Set.new(tree.added.keys) &
-      Set.new(tree.changed.keys) &
-      Set.new(tree.common.keys)
-    ).count > 0
-    raise "Cannot diff databases, conflicting operations"
-  end
-
-  sql += tree.add.reduce("") do |acc, (gid, _)|
-    object = source.find_by_gid(gid)
-
-    if object.nil? || object.add.empty?
-      acc
-    else
-      acc += %Q{
-  -- Adding #{object.name}
-  #{object.add}
-
-      }
-    end
-  end
+  diff = tree.diff(source, target)
+  diff.to_sql
 end
