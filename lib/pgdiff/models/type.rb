@@ -17,8 +17,19 @@ module PgDiff
         %Q{TYPE #{name}}
       end
 
+      def columns
+        JSON.parse(@data['columns'])
+      end
+
       def add
-        ""
+        return "" if category == "A"
+        return "" if columns.empty?
+
+        %Q{CREATE TYPE #{name} AS (\n}+
+        columns.map do |column|
+          %Q{   #{column['attribute']} #{column['type']}}
+        end.join(",\n") +
+        %Q{\n);}
       end
     end
   end

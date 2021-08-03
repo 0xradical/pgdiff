@@ -1,6 +1,6 @@
 module PgDiff
   class Database
-    attr_reader :catalog, :world, :queries
+    attr_reader :label, :catalog, :world, :queries
 
     def initialize(label, dbparams = {})
       @label = label
@@ -160,6 +160,7 @@ module PgDiff
       @world.tables.values.each do |table|
         table.columns.each do |column|
           type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
+          binding.pry if type.nil?
           @world.add_dependency(
             PgDiff::Dependency.new(
               table,
@@ -196,6 +197,23 @@ module PgDiff
               PgDiff::Dependency.new(
                 view,
                 table,
+                "normal"
+              )
+            )
+          end
+        end
+      end
+
+      # these attributes are not seen on pg_depend either ...
+      puts "Addind composite types dependencies on #{@label} ..."
+      @world.types.values.each do |type|
+        type.columns.each do |attribute|
+          attribute_type = @world.objects[attribute['objid']]
+          if attribute_type
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                type,
+                attribute_type,
                 "normal"
               )
             )

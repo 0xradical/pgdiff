@@ -33,7 +33,7 @@ module PgDiff
 
       parents.each{|k,v| v.delete(k) }
 
-      parents.sort_by{|k,v| v.length}.map(&:first)
+      parents.sort_by{|k,v| v.length}.map(&:first).reject{|n| n.gid == node.gid }
     end
 
     def _create_deps(node, p = [], c = Set.new)
@@ -61,7 +61,7 @@ module PgDiff
 
       children.each{|k,v| v.delete(k) }
 
-      children.sort_by{|k,v| v.length}.map(&:first)
+      children.sort_by{|k,v| v.length}.map(&:first).reject{|n| n.gid == node.gid }
     end
 
     def _remove_deps(node, p = [], c = Set.new)
@@ -89,7 +89,7 @@ module PgDiff
 
       children.each{|k,v| v.delete(k) }
 
-      children.sort_by{|k,v| v.length}.map(&:first)
+      children.sort_by{|k,v| v.length}.map(&:first).reject{|n| n.gid == node.gid }
     end
 
     def _add(node)
@@ -123,7 +123,7 @@ module PgDiff
       # Add these
       puts "Initiating diff"
 
-      puts "Fetching objects that should be added"
+      puts "Fetching objects from #{source.label} that should be added to #{target.label}"
       source.objects.values.select do |object|
         if !target.find(object)
           _add(object)
@@ -131,7 +131,7 @@ module PgDiff
       end
 
       # Remove these
-      puts "Fetching objects that should be removed"
+      puts "Fetching objects from #{target.label} that should be removed from #{source.label}"
       target.objects.values.select do |object|
         if !source.find(object)
           _remove(object)

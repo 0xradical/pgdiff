@@ -4,6 +4,7 @@ module PgDiff
       # objid from pg_depend
       attr_accessor :id
       attr_accessor :dependencies
+      attr_reader :data
 
       def initialize(data)
         @data = data
