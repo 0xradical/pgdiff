@@ -289,7 +289,7 @@ module PgDiff
         '#{label}' AS origin
         FROM pg_rewrite AS r
         INNER JOIN pg_depend AS d ON r.oid=d.objid
-        INNER JOIN pg_depend AS fd ON r.oid = fd.objid AND fd.refclassid = 'pg_proc'::regclass
+        LEFT JOIN pg_depend AS fd ON r.oid = fd.objid AND fd.refclassid = 'pg_proc'::regclass
         INNER JOIN pg_attribute a ON a.attnum = d.refobjsubid AND a.attrelid = d.refobjid AND a.attisdropped = false
         INNER JOIN pg_class c ON c.oid = d.refobjid
         INNER JOIN pg_namespace n ON n.oid = c.relnamespace
