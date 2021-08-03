@@ -1,7 +1,7 @@
 module PgDiff
   module Models
     class Table < Base
-      attr_reader :columns, :constraints, :indexes, :options, :privileges
+      attr_reader :columns, :constraints, :indexes, :options, :privileges, :sequences
 
       def initialize(data)
         super(data)
@@ -10,6 +10,7 @@ module PgDiff
         @indexes = []
         @options = []
         @privileges = []
+        @sequences = []
       end
 
       def name
@@ -28,6 +29,7 @@ module PgDiff
         %Q{
           TABLE #{name}
           #{columns.map(&:to_s).join("\n") if columns.length > 0}
+          #{sequences.map(&:to_s).join("\n") if sequences.length > 0}
           #{constraints.map(&:to_s).join("\n") if constraints.length > 0}
           #{indexes.map(&:to_s).join("\n") if indexes.length > 0}
           #{options.map(&:to_s).join("\n") if options.length > 0}
@@ -63,6 +65,10 @@ module PgDiff
         data.each do |c|
           @privileges << Models::TablePrivilege.new(c, self)
         end
+      end
+
+      def add_sequence(sequence)
+        @sequences << sequence
       end
 
       def add

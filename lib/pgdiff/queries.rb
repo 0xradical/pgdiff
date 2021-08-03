@@ -392,7 +392,7 @@ module PgDiff
               '#{label}' AS origin
                     FROM (
                         SELECT
-                            c.oid, ns.nspname AS seq_nspname, c.relname AS seq_name, r.rolname as owner, sc.relname AS ownedby_table, a.attname AS ownedby_column
+                            c.oid, ns.nspname AS seq_nspname, c.relname AS seq_name, r.rolname as owner, (pg_identify_object('pg_class'::regclass, sc.oid, 0)).identity AS ownedby_table, a.attname AS ownedby_column
                         FROM pg_class c
                         INNER JOIN pg_namespace ns ON ns.oid = c.relnamespace
                         INNER JOIN pg_roles r ON r.oid = c.relowner

@@ -205,7 +205,7 @@ module PgDiff
       end
 
       # these attributes are not seen on pg_depend either ...
-      puts "Addind composite types dependencies on #{@label} ..."
+      puts "Adding composite types dependencies on #{@label} ..."
       @world.types.values.each do |type|
         type.columns.each do |attribute|
           attribute_type = @world.objects[attribute['objid']]
@@ -218,6 +218,21 @@ module PgDiff
               )
             )
           end
+        end
+      end
+
+      puts "Addind sequence dependencies for tables on #{@label} ..."
+      @world.sequences.values.each do |sequence|
+        table = @world.find_by_gid("TABLE #{sequence.ownedby_table}")
+
+        if table
+          @world.add_dependency(
+              PgDiff::Dependency.new(
+                table,
+                sequence,
+                "normal"
+              )
+            )
         end
       end
     end

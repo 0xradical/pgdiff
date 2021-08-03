@@ -123,7 +123,7 @@ module PgDiff
       # Add these
       puts "Initiating diff"
 
-      puts "Fetching objects from #{source.label} that should be added to #{target.label}"
+      puts "Fetching objects from source that should be added to target"
       source.objects.values.select do |object|
         if !target.find(object)
           _add(object)
@@ -131,7 +131,7 @@ module PgDiff
       end
 
       # Remove these
-      puts "Fetching objects from #{target.label} that should be removed from #{source.label}"
+      puts "Fetching objects from source that should be removed from target"
       target.objects.values.select do |object|
         if !source.find(object)
           _remove(object)
