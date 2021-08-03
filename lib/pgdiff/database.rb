@@ -175,7 +175,7 @@ module PgDiff
             if args
               function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc.sub("#{args})",''))}/}.first
               if function
-                column.default_value_fn = "#{function.name}()"
+                column.default_value_fn = "#{function.name}(#{args})"
                 @world.add_dependency(
                   PgDiff::Dependency.new(
                     table,
