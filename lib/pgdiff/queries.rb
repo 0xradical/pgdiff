@@ -299,7 +299,7 @@ module PgDiff
 
     def functions(schemas = self.schemas.map{|row| row["nspname"] })
       query(%Q{
-        SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes,
+        SELECT p.proname, n.nspname, pg_get_functiondef(p.oid) as definition, p.prosrc, p.proowner::regrole::name as owner, oidvectortypes(proargtypes) as argtypes,
         (pg_identify_object('pg_proc'::regclass, p.oid, 0)).identity,
         p.oid as objid,
         '#{label}' AS origin,

@@ -275,12 +275,34 @@ module PgDiff
 
         if table
           @world.add_dependency(
-              PgDiff::Dependency.new(
-                table,
-                sequence,
-                "normal"
-              )
+            PgDiff::Dependency.new(
+              table,
+              sequence,
+              "normal"
             )
+          )
+        end
+      end
+
+      puts "Adding plpgsql function dependencies on #{@label} ..."
+      @world.functions.values.each do |function|
+        begin
+          possible_types = function.definition[/DECLARE\s+([\s\S]+)\s+BEGIN/,1].split(";").map(&:strip).map{|s| s.split(/\s+/)}.flatten
+
+          possible_types.each do |ptype|
+            type = @world.find_by_gid("TYPE #{ptype}")
+            if type
+              @world.add_dependency(
+                PgDiff::Dependency.new(
+                  function,
+                  type,
+                  "internal"
+                )
+              )
+            end
+          end
+        rescue
+          next
         end
       end
     end
