@@ -117,7 +117,7 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT conname, contype, pg_get_constraintdef(c.oid) as definition,
+        SELECT conname, contype, conrelid, confrelid, pg_get_constraintdef(c.oid) as definition,
         (pg_identify_object('pg_constraint'::regclass, c.oid, 0)).identity,
         c.oid as objid,
         '#{label}' AS origin

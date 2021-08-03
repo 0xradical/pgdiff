@@ -189,6 +189,23 @@ module PgDiff
         end
       end
 
+      # Adding table constraints dependencies
+      puts "Adding constraints dependencies on #{@label} ..."
+      @world.constraints.values.each do |constraint|
+        table  = @world.objects[constraint.conrelid]
+        ftable = @world.objects[constraint.confrelid]
+
+        if table && ftable
+          @world.add_dependency(
+            PgDiff::Dependency.new(
+              table,
+              ftable,
+              "normal"
+            )
+          )
+        end
+      end
+
       # views have dependencies mapped outside pg_depend
       puts "Adding views dependencies on #{@label} ..."
       @world.views.values.each do |view|

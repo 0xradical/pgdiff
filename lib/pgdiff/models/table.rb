@@ -83,7 +83,7 @@ module PgDiff
         ].flatten.join(",\n") +
         %Q{\n);\n\n} +
         indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
-          index.indexdef
+          %Q{#{index.indexdef};}
         end.join("\n") +
         "\n\n" +
         privileges.map do |privilege|

@@ -32,7 +32,7 @@ module PgDiff
       end
 
       def add
-        %Q{CREATE DOMAIN "#{name}" AS #{data_type};\n} +
+        %Q{CREATE DOMAIN #{name} AS #{data_type};\n} +
         constraints.map do |constraint|
           constraint.add
         end.join("\n")
