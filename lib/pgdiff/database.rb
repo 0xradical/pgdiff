@@ -224,18 +224,11 @@ module PgDiff
       puts "Adding views dependencies on #{@label} ..."
       @world.rules.values.each do |rule|
         rule.ops.each do |op|
-          view = @world.find_by_gid("VIEW #{op['viewname']}")
-          if view
-            @world.add_dependency(
-              PgDiff::Dependency.new(
-                view,
-                rule,
-                "internal"
-              )
-            )
-          end
+          # original view
+          view = @world.find_by_gid("VIEW #{op['viewname']}") || @world.find_by_gid("MATERIALIZED VIEW #{op['viewname']}")
+
           # if rule depends on another view lol
-          oview = @world.find_by_gid("VIEW #{op['schemaname']}.#{op['tablename']}")
+          oview = @world.find_by_gid("VIEW #{op['schemaname']}.#{op['tablename']}") || @world.find_by_gid("MATERIALIZED VIEW #{op['schemaname']}.#{op['tablename']}")
           if oview
             @world.add_dependency(
               PgDiff::Dependency.new(
@@ -250,7 +243,7 @@ module PgDiff
           if viewfn
             @world.add_dependency(
               PgDiff::Dependency.new(
-                rule,
+                view,
                 viewfn,
                 "internal"
               )
