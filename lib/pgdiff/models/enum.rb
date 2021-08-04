@@ -13,14 +13,58 @@ module PgDiff
         "ENUM #{name} #{elements}"
       end
 
-      def change(from)
-        super
-        # dependencies.map do |d|
-        #   d.to_s
-        # end.join("\n")
-        # elements.each do |element|
+      def change(target)
+        sqls = []
 
-        # end
+        added = Set.new(elements) - Set.new(target.elements)
+        removed = Set.new(target.elements) - Set.new(elements)
+        original = (Set.new(elements) | Set.new(target.elements)) - added - removed
+
+        if removed.length > 0
+          deps = dependencies.others_depend_on_me.objects.map(&:gid).reject{|dep| dep == "#{gid}[]" }
+          if deps.count > 0
+          sqls << %Q{-- To remove a value from an ENUM type, you have to make sure
+-- that there are no data in columns that use this type.
+-- Then, you can safely remove it with the following query:
+--
+-- DELETE FROM pg_enum
+--  WHERE enumlabel IN (#{removed.map{|r| '\'' + r + '\'' }})
+--  AND enumtypid = (
+--    SELECT oid FROM pg_type WHERE typname = '#{name}'
+--  );
+--
+-- #{gid} has the following dependencies:
+#{deps.map{|d| '-- * ' + d }.join("\n")}
+}
+          else
+            sqls << %Q{
+DELETE FROM pg_enum
+  WHERE enumlabel IN (#{removed.map{|r| '\'' + r + '\'' }.join(",")})
+  AND enumtypid = (
+    SELECT oid FROM pg_type WHERE typname = '#{name}'
+  );
+            }
+          end
+        end
+
+        # adding at the right position
+        current = Set.new(original).to_a
+
+        added.each do |added_enum|
+          0.upto(current.length).each do |index|
+            if elements.join("|").include?(Set.new(current).to_a.insert(index, added_enum).join("|"))
+              if index == current.length
+                sqls << %Q{ALTER TYPE #{name} ADD VALUE '#{added_enum}';}
+              else
+                sqls << %Q{ALTER TYPE #{name} ADD VALUE '#{added_enum}' BEFORE '#{current[index]}';}
+              end
+              current.insert(index, added_num)
+              break
+            end
+          end
+        end
+
+        sqls.empty? ? "" : sqls.join("\n")
       end
 
       def elements

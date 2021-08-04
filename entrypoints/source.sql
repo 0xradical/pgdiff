@@ -49,6 +49,13 @@ ALTER DOMAIN app.username ADD CONSTRAINT username__boundary_dash CHECK (NOT(valu
 ALTER DOMAIN app.username ADD CONSTRAINT username__boundary_underline CHECK (NOT(value ~* '^_' OR value ~* '_$'));
 ALTER DOMAIN app.username ADD CONSTRAINT username__length_upper CHECK (LENGTH(value) <= 15);
 
+CREATE TYPE app.answers AS ENUM (
+  'unknown',
+  'yes',
+  'maybe',
+  'no'
+);
+
 CREATE TYPE app.api_key_status AS ENUM (
   'enabled',
   'disabled',
@@ -108,6 +115,8 @@ CREATE TABLE app.admin_accounts (
   email                   varchar      DEFAULT ''::varchar NOT NULL,
   signin_count            integer      DEFAULT 0           NOT NULL,
   signout_count           integer      DEFAULT 1           NOT NULL,
+  api_key                 varchar      DEFAULT public.uuid_generate_v4() NOT NULL,
+  api_key_status          app.api_key_status DEFAULT 'enabled'::app.api_key_status,
   current_sign_in_at      timestamptz,
   last_sign_in_at         timestamptz,
   current_sign_in_ip      inet,

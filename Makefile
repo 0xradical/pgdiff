@@ -17,7 +17,7 @@ console: up
 	@bundle exec pry -r ./lib/pgdiff.rb -r ./bin/console.rb
 
 diff: up
-	@rm pgdiff.sql
+	@rm -f pgdiff.sql
 	@echo 'Generating pgdiff.sql'
 	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/diff.rb
 	@echo 'Applying generated pgdiff.sql'

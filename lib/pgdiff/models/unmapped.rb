@@ -18,7 +18,22 @@ module PgDiff
       end
 
       def add
-        ""
+        return "" if system?
+
+        super
+      end
+
+      def remove
+        return "" if system?
+
+        super
+      end
+
+      def system?
+        return true if name =~ /\A(pg_toast)\./
+        return true if gid =~ /OPERATOR public\./
+
+        false
       end
     end
   end

@@ -38,6 +38,12 @@ ALTER DOMAIN app.username ADD CONSTRAINT username__length_upper CHECK (LENGTH(va
 ALTER DOMAIN app.username ADD CONSTRAINT username__length_lower CHECK (LENGTH(value) >= 5);
 ALTER DOMAIN app.username ADD CONSTRAINT username__lowercased CHECK (value = LOWER(value));
 
+CREATE TYPE app.answers AS ENUM (
+  'yes',
+  'maybe',
+  'definitely'
+);
+
 CREATE TYPE app.api_key_status AS ENUM (
   'enabled',
   'disabled',
@@ -99,6 +105,8 @@ CREATE TABLE app.admin_accounts (
   sign_in_count           integer      DEFAULT 0           NOT NULL,
   signout_count           integer      DEFAULT 0           NOT NULL,
   domains                 jsonb        DEFAULT '{}'::jsonb,
+  api_key                 varchar      DEFAULT public.uuid_generate_v4() NOT NULL,
+  api_key_status          app.api_key_status DEFAULT 'onhold'::app.api_key_status,
   current_sign_in_at      timestamptz,
   last_sign_in_at         timestamptz,
   current_sign_in_ip      inet,
