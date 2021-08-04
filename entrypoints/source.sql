@@ -106,7 +106,8 @@ CREATE TABLE app.user_accounts (
 CREATE TABLE app.admin_accounts (
   id                      bigserial    PRIMARY KEY,
   email                   varchar      DEFAULT ''::varchar NOT NULL,
-  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  signin_count            integer      DEFAULT 0           NOT NULL,
+  signout_count           integer      DEFAULT 1           NOT NULL,
   current_sign_in_at      timestamptz,
   last_sign_in_at         timestamptz,
   current_sign_in_ip      inet,

@@ -17,9 +17,11 @@ console: up
 	@bundle exec pry -r ./lib/pgdiff.rb -r ./bin/console.rb
 
 diff: up
+	@rm pgdiff.sql
+	@echo 'Generating pgdiff.sql'
 	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/diff.rb
 	@echo 'Applying generated pgdiff.sql'
-	@docker exec -ti target.database.io sh -c "cat /pgdiff/pgdiff.sql | psql -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
+	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql thiagobrandam/pgdiff sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
 
 test: up
 	@bundle exec rake test

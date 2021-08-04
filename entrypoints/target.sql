@@ -96,7 +96,8 @@ CREATE TABLE app.users (
 CREATE TABLE app.admin_accounts (
   id                      bigserial    PRIMARY KEY,
   email                   varchar      DEFAULT ''::varchar NOT NULL,
-  sign_in_count           integer      DEFAULT 1           NOT NULL,
+  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  signout_count           integer      DEFAULT 0           NOT NULL,
   domains                 jsonb        DEFAULT '{}'::jsonb,
   current_sign_in_at      timestamptz,
   last_sign_in_at         timestamptz,

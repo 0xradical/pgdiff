@@ -6,6 +6,7 @@ module PgDiff
       def initialize(data)
         super(data)
         @columns = []
+        @by_columns = Hash.new
         @constraints = []
         @indexes = []
         @options = []
@@ -37,9 +38,13 @@ module PgDiff
         }
       end
 
+      def find_column(name)
+        @by_columns[name]
+      end
+
       def add_columns(data)
         data.each do |c|
-          @columns << Models::TableColumn.new(c, self)
+          @columns << (Models::TableColumn.new(c, self).tap{|m| @by_columns[m.name] = m })
         end
       end
 
@@ -75,7 +80,7 @@ module PgDiff
         %Q{CREATE TABLE #{name} (\n} +
         [
           columns.map do |column|
-            "    " + column.add
+            "    " + column.definition
           end,
           constraints.select{|c| c.contype != "t" }.map do |constraint|
             "    " + constraint.indexdef
@@ -93,6 +98,57 @@ module PgDiff
 
       def remove
         %Q{DROP TABLE #{name};}
+      end
+
+      def change(target)
+        sqls = []
+
+        added_columns = Set.new(columns.map(&:name)) - Set.new(target.columns.map(&:name))
+        removed_columns = Set.new(target.columns.map(&:name)) - Set.new(columns.map(&:name))
+        renamed_columns = Set.new
+
+        # detect rename (changed only the name)
+        if added_columns.length > 0 && removed_columns.length > 0
+          added_columns.to_a.product(removed_columns.to_a).select do |added, removed|
+            changeset = find_column(added).changeset(target.find_column(removed))
+
+            if changeset.length == 1 && changeset.member?(:name)
+              added_columns.delete(added)
+              removed_columns.delete(removed)
+              renamed_columns.add([ removed , added ])
+
+              true
+            else
+              false
+            end
+          end
+        end
+
+        common_columns = (Set.new(columns.map(&:name)) | Set.new(target.map(&:name)))
+        common_columns = common_columns - added_columns
+        common_columns = common_columns - removed_columns
+        common_columns = common_columns - Set.new(renamed_columns.to_a.flatten)
+
+        added_columns.each do |column|
+          sqls << find_column(column).add
+        end
+
+        removed_columns.each do |column|
+          sqls << target.find_column(column).remove
+        end
+
+        renamed_columns.each do |o, n|
+          sqls << target.find_column(o).rename(n)
+        end
+
+        common_columns.select do |col|
+          find_column(col).to_s != target.find_column(col).to_s
+        end.each do |column|
+          # binding.pry
+
+        end
+
+        sqls.join("\n")
       end
     end
   end

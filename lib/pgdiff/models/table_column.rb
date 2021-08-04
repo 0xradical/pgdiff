@@ -78,11 +78,34 @@ module PgDiff
         "TABLE COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}"
       end
 
-      def change
+      def add
         %Q{ALTER TABLE #{table.name} ADD COLUMN #{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''};}
       end
 
-      def add
+      def remove
+        %Q{ALTER TABLE #{table.name} DROP COLUMN #{name};}
+      end
+
+      def rename(newname)
+        %Q{ALTER TABLE #{table.name} RENAME COLUMN #{name} TO #{newname};}
+      end
+
+      def change
+        ""
+      end
+
+      def changeset(target)
+        set = Set.new
+
+        set.add(:name) if name != target.name
+        set.add(:type) if type != target.type
+        set.add(:not_null) if not_null != target.not_null
+        set.add(:default) if default_value != target.default_value
+
+        set
+      end
+
+      def definition
         %Q{#{name} #{type}#{not_null ? ' NOT NULL' : ''}#{default_value ? ' DEFAULT ' + default_value : ''}}
       end
     end
