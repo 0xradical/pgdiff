@@ -494,9 +494,7 @@ module PgDiff
       })
     end
 
-    def domain_constraints(domain_name)
-      schema, domain = schema_and_table(domain_name)
-
+    def domain_constraints
       query(%Q{
         WITH extension_oids AS (
           SELECT
@@ -511,12 +509,12 @@ module PgDiff
               pg_catalog.pg_get_constraintdef(rr.oid, true) AS "definition",
               (pg_identify_object('pg_constraint'::regclass, rr.oid, 0)).identity,
               rr.oid as objid,
+              (n.nspname || '.' || t.typname) AS domain_name,
               '#{label}' AS origin
         FROM pg_catalog.pg_type t
           LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
           LEFT JOIN pg_catalog.pg_constraint rr on t.oid = rr.contypid
-        WHERE n.nspname = '#{schema}' AND t.typname = '#{domain}'
-          AND t.typtype = 'd'
+        WHERE t.typtype = 'd'
           AND rr.conname IS NOT NULL
           AND (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid))
           AND  NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)

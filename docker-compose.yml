@@ -26,6 +26,7 @@ services:
     volumes:
       - ./entrypoints/setup.sh:/docker-entrypoint-initdb.d/setup.sh
       - ./entrypoints/target.sql:/setup.sql
+      - .:/pgdiff
 
 networks:
   default:

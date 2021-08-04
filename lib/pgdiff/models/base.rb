@@ -37,21 +37,15 @@ module PgDiff
       end
 
       def add
-        "
-        -- Addition of #{self.class.name} (#{world_type} #{name}) not implemented
-        "
+        "-- Addition of #{self.class.name} (#{world_type} #{name}) not implemented"
       end
 
-      def remove(diff)
-        "
-        -- Removal of #{self.class.name} (#{world_type} #{name}) not implemented
-        "
+      def remove
+        "-- Removal of #{self.class.name} (#{world_type} #{name}) not implemented"
       end
 
-      def change(diff, from)
-        "
-        -- Changes to #{self.class.name} (#{world_type} #{name}) not implemented
-        "
+      def change(from)
+        "-- Changes to #{self.class.name} (#{world_type} #{name}) not implemented"
       end
 
       # identity from pg_identify_object

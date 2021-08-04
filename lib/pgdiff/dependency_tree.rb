@@ -139,11 +139,11 @@ module PgDiff
       end
 
       # Change these
-      # source.objects.values.select do |object|
-      #   if (tobject = target.find(object)) && (tobject.to_s != object.to_s)
-
-      #   end
-      # end
+      source.objects.values.select do |object|
+        if (tobject = target.find(object)) && (tobject.to_s != object.to_s)
+          @change[object.gid] = true
+        end
+      end
 
       PgDiff::Diff.new(self, source, target) unless conflict?(source, target)
     end

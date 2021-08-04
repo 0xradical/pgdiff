@@ -49,6 +49,12 @@ module PgDiff
           privilege.add
         end.join("\n")
       end
+
+      def remove
+        return "" if extension_function == "t"
+
+        %Q{DROP FUNCTION IF EXISTS #{name}(#{argtypes});}
+      end
     end
   end
 end

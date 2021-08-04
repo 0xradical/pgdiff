@@ -81,8 +81,17 @@ module PgDiff
           sequence.add_privileges(@queries.sequence_privileges(sequence.name))
         end
       when "PgDiff::Models::Domain"
-        objclass.new(objdata).tap do |domain|
-          domain.add_constraints(@queries.domain_constraints(domain.name))
+        objclass.new(objdata)
+      when "PgDiff::Models::DomainConstraint"
+        domain = @world.find_by_gid("TYPE #{objdata['domain_name']}")
+        if domain
+          objclass.new(objdata, domain).tap do |constraint|
+            domain.add_constraint(constraint)
+          end
+        else
+          @world.objects[objdata["objid"]] = PgDiff::Models::Unmapped.new(objdata["objid"], objdata["identity"], "DOMAIN CONSTRAINT", @label)
+          @world.gids[@world.objects[objdata["objid"]].gid] = objdata["objid"]
+          @world.objects[objdata["objid"]]
         end
       else
         objclass.new(objdata)

@@ -21,7 +21,7 @@ module PgDiff
         %Q{CREATE EXTENSION IF NOT EXISTS "#{@data['name']}" WITH SCHEMA #{schema};}
       end
 
-      def remove(diff)
+      def remove
         %Q{DROP EXTENSION "#{@data['name']}";}
       end
     end

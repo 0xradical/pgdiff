@@ -27,11 +27,19 @@ module PgDiff
       end
 
       def add
+        return "" if from_extension == "t"
+
         %Q{CREATE TYPE #{name} AS ENUM (\n} +
         elements.map{|e| "'#{e}'"}.map do |element|
           " #{element}"
         end.join(",\n") +
         %Q{\n);}
+      end
+
+      def remove
+        return "" if from_extension == "t"
+
+        %Q{DROP TYPE #{name};}
       end
     end
   end

@@ -22,7 +22,7 @@ module PgDiff
         %Q{CREATE SCHEMA IF NOT EXISTS "#{nspname}";}
       end
 
-      def remove(diff)
+      def remove
         return "" if nspname == "public"
 
         %Q{DROP SCHEMA "#{nspname}";}

@@ -42,7 +42,7 @@ module PgDiff
         end.join("\n")
       end
 
-      def remove(diff)
+      def remove
         %Q{DROP #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name};}
       end
     end

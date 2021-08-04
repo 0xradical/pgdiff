@@ -46,6 +46,9 @@ module PgDiff
       @query.domains.map do |data|
         @world.add_object(data, Models::Domain)
       end
+      @query.domain_constraints.map do |data|
+        @world.add_object(data, Models::DomainConstraint)
+      end
       @query.types.map do |data|
         @world.add_object(data, Models::Type)
       end

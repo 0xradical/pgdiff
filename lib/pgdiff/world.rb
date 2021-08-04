@@ -16,30 +16,31 @@ module PgDiff
     attr_reader :objects, :classes, :dependencies,
                 :roles, :schemas, :tables, :views,
                 :functions, :aggregates, :sequences,
-                :domains, :enums, :types, :extensions, :triggers,
+                :domains, :domain_constraints, :enums, :types, :extensions, :triggers,
                 :indexes, :constraints, :gids, :unmapped, :rules
 
     def initialize
-      @objects      = Hash.new
-      @gids         = Hash.new
-      @classes      = Hash.new
-      @dependencies = Hash.new
-      @roles        = Hash.new
-      @schemas      = Hash.new
-      @tables       = Hash.new
-      @views        = Hash.new
-      @functions    = Hash.new
-      @aggregates   = Hash.new
-      @sequences    = Hash.new
-      @domains      = Hash.new
-      @enums        = Hash.new
-      @types        = Hash.new
-      @extensions   = Hash.new
-      @triggers     = Hash.new
-      @unmapped     = Hash.new
-      @constraints  = Hash.new
-      @indexes      = Hash.new
-      @rules        = Hash.new
+      @objects            =  Hash.new
+      @gids               =  Hash.new
+      @classes            =  Hash.new
+      @dependencies       =  Hash.new
+      @roles              =  Hash.new
+      @schemas            =  Hash.new
+      @tables             =  Hash.new
+      @views              =  Hash.new
+      @functions          =  Hash.new
+      @aggregates         =  Hash.new
+      @sequences          =  Hash.new
+      @domains            =  Hash.new
+      @domain_constraints = Hash.new
+      @enums              = Hash.new
+      @types              = Hash.new
+      @extensions         = Hash.new
+      @triggers           = Hash.new
+      @unmapped           = Hash.new
+      @constraints        = Hash.new
+      @indexes            = Hash.new
+      @rules              = Hash.new
     end
 
     # bag of objects coming from catalog
@@ -77,6 +78,9 @@ module PgDiff
     end
     def add_domain(domain)
       @domains[domain.name] ||= domain
+    end
+    def add_domainconstraint(domain_constraint)
+      @domain_constraints[domain_constraint.name] ||= domain_constraint
     end
     def add_enum(enum)
       @enums[enum.name] ||= enum

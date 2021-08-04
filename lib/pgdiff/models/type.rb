@@ -24,12 +24,21 @@ module PgDiff
       def add
         return "" if category == "A"
         return "" if columns.empty?
+        return "" if from_extension == "t"
 
         %Q{CREATE TYPE #{name} AS (\n}+
         columns.map do |column|
           %Q{   #{column['attribute']} #{column['type']}}
         end.join(",\n") +
         %Q{\n);}
+      end
+
+      def remove
+        return "" if category == "A"
+        return "" if columns.empty?
+        return "" if from_extension == "t"
+
+        %Q{DROP TYPE #{name};}
       end
     end
   end

@@ -8,12 +8,12 @@ module PgDiff
         @domain = domain
       end
 
-      def world_type
-        "DOMAIN CONSTRAINT"
+      def name
+        constraint_name
       end
 
-      def gid
-        "DOMAIN CONSTRAINT ON #{domain.name}"
+      def world_type
+        "DOMAIN CONSTRAINT"
       end
 
       def to_s
@@ -22,6 +22,20 @@ module PgDiff
 
       def add
         %Q{ALTER DOMAIN #{domain.name} ADD CONSTRAINT #{constraint_name} #{definition};}
+      end
+
+      def remove
+        %Q{ALTER DOMAIN #{domain.name} DROP CONSTRAINT #{constraint_name};}
+      end
+
+      def change(target)
+        sqls = []
+
+        if target.name != name
+          sqls << %{ALTER DOMAIN #{domain.name} RENAME CONSTRAINT #{target.name} TO #{name};}
+        end
+
+        sqls.join("\n")
       end
     end
   end

@@ -11,17 +11,61 @@ module PgDiff
     def to_sql
       sql = ""
 
-      sql += tree.add.reduce("") do |acc, (gid, _)|
+      sql += tree.add.keys.reduce("") do |acc, gid|
         object = source.find_by_gid(gid)
 
-        if object.nil? || object.add.empty?
+        if object.nil?
           acc
         else
-          acc += %Q{
-      -- Adding #{gid.inspect}
-      #{object.add}
+          clause = object.add
 
-          }
+          if clause.empty?
+            acc
+          else
+            acc += %Q{
+-- Adding #{gid.inspect}
+#{clause}
+}
+          end
+        end
+      end
+
+      sql += tree.remove.keys.reverse.reduce("") do |acc, gid|
+        object = target.find_by_gid(gid)
+
+        if object.nil?
+          acc
+        else
+          clause = object.remove
+
+          if clause.empty?
+            acc
+          else
+            acc += %Q{
+-- Removing #{gid.inspect}
+#{clause}
+}
+          end
+        end
+      end
+
+      sql += tree.change.keys.reduce("") do |acc, gid|
+        sobject = source.find_by_gid(gid)
+        tobject = target.find_by_gid(gid)
+
+        if sobject.nil? || tobject.nil?
+          acc
+        else
+          clause = sobject.change(tobject)
+
+          if clause.empty?
+            acc
+          else
+            acc += %Q{
+-- Changing #{gid.inspect}
+#{clause}
+}
+          end
         end
       end
     end

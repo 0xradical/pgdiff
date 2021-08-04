@@ -18,7 +18,8 @@ console: up
 
 diff: up
 	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/diff.rb
-	@docker-compose -f docker-compose.yml -f docker-compose.diff.yml run target.database.io
+	@echo 'Applying generated pgdiff.sql'
+	@docker exec -ti target.database.io sh -c "cat /pgdiff/pgdiff.sql | psql -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
 
 test: up
 	@bundle exec rake test
