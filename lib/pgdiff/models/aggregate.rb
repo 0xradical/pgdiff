@@ -21,6 +21,10 @@ module PgDiff
         %Q{#{definition}} +
         %Q{\n);}
       end
+
+      def remove
+        %Q{DROP AGGREGATE IF EXISTS #{name}(#{argtypes});}
+      end
     end
   end
 end

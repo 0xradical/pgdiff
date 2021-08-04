@@ -32,15 +32,15 @@ module PgDiff
       @aggregates         =  Hash.new
       @sequences          =  Hash.new
       @domains            =  Hash.new
-      @domain_constraints = Hash.new
-      @enums              = Hash.new
-      @types              = Hash.new
-      @extensions         = Hash.new
-      @triggers           = Hash.new
-      @unmapped           = Hash.new
-      @constraints        = Hash.new
-      @indexes            = Hash.new
-      @rules              = Hash.new
+      @domain_constraints =  Hash.new
+      @enums              =  Hash.new
+      @types              =  Hash.new
+      @extensions         =  Hash.new
+      @triggers           =  Hash.new
+      @unmapped           =  Hash.new
+      @constraints        =  Hash.new
+      @indexes            =  Hash.new
+      @rules              =  Hash.new
     end
 
     # bag of objects coming from catalog

@@ -1,3 +1,7 @@
+CREATE ROLE "anonymous" LOGIN;
+CREATE ROLE "user" LOGIN;
+CREATE ROLE "admin" LOGIN;
+
 -- public api used in developer dash, user dash,
 -- uses JWT token for authentication, role "user"
 CREATE SCHEMA IF NOT EXISTS api;
@@ -51,7 +55,7 @@ CREATE TYPE app.api_key_status AS ENUM (
   'blacklisted'
 );
 
-CREATE TYPE app.provider_created_by AS ENUM (
+CREATE TYPE app.provider_created_for AS ENUM (
   'api',
   'system'
 );
@@ -73,4 +77,42 @@ CREATE TYPE course_areas AS ENUM ('unclassified', 'tech', 'non-tech');
 CREATE TYPE app.authority_confirmation_method AS ENUM (
   'dns',
   'html'
+);
+
+CREATE OR REPLACE FUNCTION app.life() RETURNS integer AS $$
+  return 42;
+$$ LANGUAGE plv8;
+
+
+CREATE OR REPLACE FUNCTION app.everything() RETURNS integer AS $$
+  return 42;
+$$ LANGUAGE plv8;
+
+
+CREATE TABLE app.user_accounts (
+  id                      bigserial    PRIMARY KEY,
+  email                   varchar      DEFAULT ''::varchar NOT NULL,
+  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  current_sign_in_at      timestamptz,
+  last_sign_in_at         timestamptz,
+  current_sign_in_ip      inet,
+  last_sign_in_ip         inet,
+  tracking_data           json         DEFAULT '{}'::json,
+  autogen_email_for_oauth boolean DEFAULT false NOT NULL,
+  created_at              timestamptz  DEFAULT NOW()       NOT NULL,
+  updated_at              timestamptz  DEFAULT NOW()       NOT NULL
+);
+
+CREATE TABLE app.admin_accounts (
+  id                      bigserial    PRIMARY KEY,
+  email                   varchar      DEFAULT ''::varchar NOT NULL,
+  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  current_sign_in_at      timestamptz,
+  last_sign_in_at         timestamptz,
+  current_sign_in_ip      inet,
+  last_sign_in_ip         inet,
+  tracking_data           json         DEFAULT '{}'::json,
+  autogen_email_for_oauth boolean DEFAULT false NOT NULL,
+  created_at              timestamptz  DEFAULT NOW()       NOT NULL,
+  updated_at              timestamptz  DEFAULT NOW()       NOT NULL
 );

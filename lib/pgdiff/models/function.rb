@@ -55,6 +55,13 @@ module PgDiff
 
         %Q{DROP FUNCTION IF EXISTS #{name}(#{argtypes});}
       end
+
+      def change(from)
+        return "" if extension_function == "t"
+        return "" if name =~ /\A(pg_catalog|information_schema)\./ && definition == from.definition
+
+        add
+      end
     end
   end
 end

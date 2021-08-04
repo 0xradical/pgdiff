@@ -13,10 +13,11 @@ module PgDiff
         "ENUM #{name} #{elements}"
       end
 
-      def change(diff, from)
-        dependencies.map do |d|
-          d.to_s
-        end.join("\n")
+      def change(from)
+        super
+        # dependencies.map do |d|
+        #   d.to_s
+        # end.join("\n")
         # elements.each do |element|
 
         # end

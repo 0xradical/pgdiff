@@ -20,6 +20,10 @@ module PgDiff
       def add
         %Q{CREATE ROLE "#{name}" #{rolinherit == 't' ? 'INHERIT' : 'NOINHERIT'} #{rolcanlogin == 't' ? 'LOGIN' : 'NOLOGIN'};}
       end
+
+      def remove
+        %Q{DROP ROLE "#{name}";}
+      end
     end
   end
 end

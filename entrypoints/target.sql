@@ -1,19 +1,14 @@
--- public api used in developer dash, user dash,
--- uses JWT token for authentication, role "user"
+CREATE ROLE "thiago" LOGIN;
+CREATE ROLE "anonymous" LOGIN;
+
 CREATE SCHEMA IF NOT EXISTS api;
--- public api used in admin
--- uses JWT token for authentication, role "admin"
 CREATE SCHEMA IF NOT EXISTS api_admin_v1;
--- public api used in course api
--- uses API key for authentication, role "anonymous"
 CREATE SCHEMA IF NOT EXISTS api_developer_v1;
 CREATE SCHEMA IF NOT EXISTS app;
 CREATE SCHEMA IF NOT EXISTS api_keys;
 CREATE SCHEMA IF NOT EXISTS jwt;
 CREATE SCHEMA IF NOT EXISTS triggers;
 CREATE SCHEMA IF NOT EXISTS settings;
-CREATE SCHEMA IF NOT EXISTS subsets;
-CREATE SCHEMA IF NOT EXISTS bi;
 CREATE SCHEMA IF NOT EXISTS transliterate;
 
 -- pgFormatter-ignore
@@ -25,7 +20,7 @@ CREATE EXTENSION IF NOT EXISTS hstore      WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS pg_trgm     WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS plv8        WITH SCHEMA pg_catalog;
 
-CREATE AGGREGATE array_accum (anyarray)
+CREATE AGGREGATE array_accumm (anyarray)
 (
   sfunc = array_cat,
   stype = anyarray,
@@ -46,7 +41,13 @@ ALTER DOMAIN app.username ADD CONSTRAINT username__lowercased CHECK (value = LOW
 CREATE TYPE app.api_key_status AS ENUM (
   'enabled',
   'disabled',
+  'onhold',
   'blacklisted'
+);
+
+CREATE TYPE app.provider_created_by AS ENUM (
+  'api',
+  'system'
 );
 
 CREATE TYPE app.provider_logo AS (
@@ -66,4 +67,43 @@ CREATE TYPE course_areas AS ENUM ('unclassified', 'tech', 'non-tech');
 CREATE TYPE app.authority_confirmation_method AS ENUM (
   'dns',
   'html'
+);
+
+CREATE OR REPLACE FUNCTION api.life() RETURNS integer AS $$
+  return 42;
+$$ LANGUAGE plv8;
+
+CREATE OR REPLACE FUNCTION app.everything() RETURNS integer AS $$
+  return 43;
+$$ LANGUAGE plv8;
+
+GRANT EXECUTE ON FUNCTION app.everything() TO "anonymous";
+
+CREATE TABLE app.users (
+  id                      bigserial    PRIMARY KEY,
+  email                   varchar      DEFAULT ''::varchar NOT NULL,
+  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  current_sign_in_at      timestamptz,
+  last_sign_in_at         timestamptz,
+  current_sign_in_ip      inet,
+  last_sign_in_ip         inet,
+  tracking_data           json         DEFAULT '{}'::json,
+  autogen_email_for_oauth boolean DEFAULT false NOT NULL,
+  created_at              timestamptz  DEFAULT NOW()       NOT NULL,
+  updated_at              timestamptz  DEFAULT NOW()       NOT NULL
+);
+
+CREATE TABLE app.admin_accounts (
+  id                      bigserial    PRIMARY KEY,
+  email                   varchar      DEFAULT ''::varchar NOT NULL,
+  sign_in_count           integer      DEFAULT 1           NOT NULL,
+  domains                 jsonb        DEFAULT '{}'::jsonb,
+  current_sign_in_at      timestamptz,
+  last_sign_in_at         timestamptz,
+  current_sign_in_ip      inet,
+  last_sign_in_ip         inet,
+  tracking_data           json         DEFAULT '{}'::jsonb,
+  autogen_email_for_oauth boolean DEFAULT false NOT NULL,
+  created_at              timestamptz  DEFAULT NOW()       NOT NULL,
+  updated_at              timestamptz  DEFAULT NOW()       NOT NULL
 );
