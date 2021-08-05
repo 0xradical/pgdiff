@@ -124,24 +124,28 @@ module PgDiff
       puts "Initiating diff"
 
       puts "Fetching objects from source that should be added to target"
-      source.objects.values.select do |object|
-        if !target.find(object)
-          _add(object)
-        end
+      to_be_added = Set.new(source.objects.values.map(&:gid)) - Set.new(target.objects.values.map(&:gid))
+      to_be_added.each do |added_gid|
+        _add(source.find_by_gid(added_gid))
       end
 
       # Remove these
       puts "Fetching objects from source that should be removed from target"
-      target.objects.values.select do |object|
-        if !source.find(object)
-          _remove(object)
-        end
+      to_be_removed = Set.new(target.objects.values.map(&:gid)) - Set.new(source.objects.values.map(&:gid))
+      to_be_removed.each do |removed_gid|
+        _remove(target.find_by_gid(removed_gid))
       end
 
       # Change these
-      source.objects.values.select do |object|
-        if (tobject = target.find(object)) && (tobject.to_s != object.to_s)
-          @change[object.gid] = true
+      puts "Fetching common objects that changed"
+      common = Set.new(source.objects.values.map(&:gid)) & Set.new(target.objects.values.map(&:gid))
+
+      common.each do |common_object_gid|
+        sobject = source.find_by_gid(common_object_gid)
+        tobject = target.find_by_gid(common_object_gid)
+
+        if tobject.to_s != sobject.to_s
+          @change[sobject.gid] = true
         end
       end
 
@@ -151,8 +155,8 @@ module PgDiff
     def conflict?(source, target)
       common = Set.new(source.objects.values.map(&:gid)) & Set.new(target.objects.values.map(&:gid))
 
-      # Don't add common objects
-      common.to_a.each{|c| @add.delete(c) }
+      # Don't add or remove common objects
+      common.to_a.each{|c| @add.delete(c); @remove.delete(c) }
 
       raise "Objects cannot be added and removed" if (Set.new(add.keys) & Set.new(remove.keys)).count > 0
       raise "Common objects cannot be added"  if (Set.new(add.keys) & common).count > 0

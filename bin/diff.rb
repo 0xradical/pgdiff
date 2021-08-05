@@ -1,11 +1,25 @@
 require "fileutils"
-require "pry"
 
-@source = PgDiff::Database.new( "source", port: 54532, dbname: "pgdiff", host: "0.0.0.0", password: "postgres", user: "postgres")
-@target = PgDiff::Database.new( "target", port: 54533, dbname: "pgdiff", host: "0.0.0.0", password: "postgres", user: "postgres")
+@source = PgDiff::Database.new(
+  "source",
+  port: ENV["SOURCE_PORT"] || 5432,
+  dbname: ENV["SOURCE_DATABASE"],
+  host: ENV["SOURCE_HOST"],
+  password: ENV["SOURCE_PASSWORD"],
+  user: ENV["SOURCE_USER"]
+)
+
+@target = PgDiff::Database.new(
+  "target",
+  port: ENV["TARGET_PORT"] || 5432,
+  dbname: ENV["TARGET_DATABASE"],
+  host: ENV["TARGET_HOST"],
+  password: ENV["TARGET_PASSWORD"],
+  user: ENV["TARGET_USER"]
+)
 
 PgDiff.compare(@source.world, @target.world).tap do |diff|
-  File.open("pgdiff.sql", "w") do |f|
+  File.open(ARGV[0], "w") do |f|
     f.write(diff)
   end
 end
