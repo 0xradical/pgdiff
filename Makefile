@@ -1,5 +1,11 @@
+VERSION := 0.0.1
+
 build:
-	@docker build . -t thiagobrandam/pgdiff
+	@docker build -f Dockerfile . -t thiagobrandam/pgdiff:$(VERSION)
+	@docker build -f Dockerfile.database . -t thiagobrandam/pgdiff-database
+
+push:
+	@docker push thiagobrandam/pgdiff:$(VERSION)
 
 up:
 	@make -s down
