@@ -24,7 +24,7 @@ module PgDiff
           else
             acc += %Q{
 -- Adding #{gid.inspect}
-#{clause}
+#{clause unless PgDiff.args.dry_run}
 }
           end
         end
@@ -43,7 +43,7 @@ module PgDiff
           else
             acc += %Q{
 -- Removing #{gid.inspect}
-#{clause}
+#{clause unless PgDiff.args.dry_run}
 }
           end
         end
@@ -61,10 +61,21 @@ module PgDiff
           if clause.empty?
             acc
           else
-            acc += %Q{
+            if PgDiff.args.dry_run
+              acc += %Q{
+-- Changing #{gid.inspect}
+---- Source:
+---- #{sobject.to_s}
+
+---- Target:
+---- #{tobject.to_s}
+}
+            else
+              acc += %Q{
 -- Changing #{gid.inspect}
 #{clause}
 }
+            end
           end
         end
       end

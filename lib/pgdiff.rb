@@ -41,6 +41,14 @@ require_relative "pgdiff/cli/options.rb"
 require_relative "pgdiff/cli/parser.rb"
 require_relative "pgdiff/cli.rb"
 
+def PgDiff.args=(args)
+  @args = args
+end
+
+def PgDiff.args
+  @args || PgDiff::Cli::Options.default
+end
+
 def PgDiff.compare(source, target)
   tree = PgDiff::DependencyTree.new
   diff = tree.diff(source, target)

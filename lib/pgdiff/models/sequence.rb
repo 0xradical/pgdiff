@@ -25,7 +25,8 @@ module PgDiff
 
       def add_privileges(data)
         data.each do |p|
-          @privileges << Models::SequencePrivilege.new(p, self)
+          privilege = Models::SequencePrivilege.new(p, self)
+          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
         end
       end
 

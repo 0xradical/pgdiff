@@ -68,7 +68,8 @@ module PgDiff
 
       def add_privileges(data)
         data.each do |c|
-          @privileges << Models::TablePrivilege.new(c, self)
+          privilege = Models::TablePrivilege.new(c, self)
+          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
         end
       end
 
