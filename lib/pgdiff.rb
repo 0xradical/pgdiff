@@ -37,6 +37,9 @@ require_relative "pgdiff/dependencies.rb"
 require_relative "pgdiff/dependency_tree.rb"
 require_relative "pgdiff/database.rb"
 require_relative "pgdiff/diff.rb"
+require_relative "pgdiff/cli/options.rb"
+require_relative "pgdiff/cli/parser.rb"
+require_relative "pgdiff/cli.rb"
 
 def PgDiff.compare(source, target)
   tree = PgDiff::DependencyTree.new
