@@ -84,7 +84,7 @@ module PgDiff
         table, column = PgDiff.args.migration.split(".")
 
         sql += %Q{
-INSERT INTO #{table} (#{column}) VALUES ('#{}');
+INSERT INTO #{table} (#{column}) VALUES ('#{PgDiff.args.timestamp}');
 }
       end
 
