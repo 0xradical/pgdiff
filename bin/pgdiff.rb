@@ -21,8 +21,8 @@ PgDiff.args = PgDiff::Cli.parse(ARGV)
 )
 
 PgDiff.compare(@source.world, @target.world).tap do |diff|
-  if PgDiff.args.output
-    File.open(PgDiff.args.output, "w") do |f|
+  if PgDiff.args.output_dir
+    File.open(File.join(PgDiff.args.output_dir, [ PgDiff.args.timestamp, "-", PgDiff.args.name.gsub(/-/,'_'), ".sql" ].join("") ), "w") do |f|
       f.write(diff)
     end
   else

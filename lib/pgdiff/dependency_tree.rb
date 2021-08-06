@@ -120,21 +120,7 @@ module PgDiff
     end
 
     def diff(source, target)
-      # Add these
       puts "Initiating diff"
-
-      puts "Fetching objects from source that should be added to target"
-      to_be_added = Set.new(source.objects.values.map(&:gid)) - Set.new(target.objects.values.map(&:gid))
-      to_be_added.each do |added_gid|
-        _add(source.find_by_gid(added_gid))
-      end
-
-      # Remove these
-      puts "Fetching objects from source that should be removed from target"
-      to_be_removed = Set.new(target.objects.values.map(&:gid)) - Set.new(source.objects.values.map(&:gid))
-      to_be_removed.each do |removed_gid|
-        _remove(target.find_by_gid(removed_gid))
-      end
 
       # Change these
       puts "Fetching common objects that changed"
@@ -147,6 +133,20 @@ module PgDiff
         if tobject.to_s != sobject.to_s
           @change[sobject.gid] = true
         end
+      end
+
+      # Add these
+      puts "Fetching objects from source that should be added to target"
+      to_be_added = Set.new(source.objects.values.map(&:gid)) - Set.new(target.objects.values.map(&:gid))
+      to_be_added.each do |added_gid|
+        _add(source.find_by_gid(added_gid))
+      end
+
+      # Remove these
+      puts "Fetching objects from source that should be removed from target"
+      to_be_removed = Set.new(target.objects.values.map(&:gid)) - Set.new(source.objects.values.map(&:gid))
+      to_be_removed.each do |removed_gid|
+        _remove(target.find_by_gid(removed_gid))
       end
 
       PgDiff::Diff.new(self, source, target) unless conflict?(source, target)

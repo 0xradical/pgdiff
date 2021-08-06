@@ -9,7 +9,38 @@ module PgDiff
     end
 
     def to_sql
-      sql = ""
+      sql = "BEGIN;\n"
+
+      sql += tree.change.keys.reduce("") do |acc, gid|
+        sobject = source.find_by_gid(gid)
+        tobject = target.find_by_gid(gid)
+
+        if sobject.nil? || tobject.nil?
+          acc
+        else
+          clause = sobject.change(tobject)
+
+          if clause.empty?
+            acc
+          else
+            if PgDiff.args.dry_run
+              acc += %Q{
+-- Changing #{gid.inspect}
+---- Source:
+---- #{sobject.to_s}
+
+---- Target:
+---- #{tobject.to_s}
+}
+            else
+              acc += %Q{
+-- Changing #{gid.inspect}
+#{clause}
+}
+            end
+          end
+        end
+      end
 
       sql += tree.add.keys.reduce("") do |acc, gid|
         object = source.find_by_gid(gid)
@@ -49,36 +80,17 @@ module PgDiff
         end
       end
 
-      sql += tree.change.keys.reduce("") do |acc, gid|
-        sobject = source.find_by_gid(gid)
-        tobject = target.find_by_gid(gid)
+      if PgDiff.args.migration
+        table, column = PgDiff.args.migration.split(".")
 
-        if sobject.nil? || tobject.nil?
-          acc
-        else
-          clause = sobject.change(tobject)
-
-          if clause.empty?
-            acc
-          else
-            if PgDiff.args.dry_run
-              acc += %Q{
--- Changing #{gid.inspect}
----- Source:
----- #{sobject.to_s}
-
----- Target:
----- #{tobject.to_s}
+        sql += %Q{
+INSERT INTO #{table} (#{column}) VALUES ('#{}');
 }
-            else
-              acc += %Q{
--- Changing #{gid.inspect}
-#{clause}
-}
-            end
-          end
-        end
       end
+
+      sql += "\nCOMMIT;"
+
+      sql
     end
   end
 end

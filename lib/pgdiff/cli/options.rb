@@ -13,7 +13,10 @@ module PgDiff
       :target_user,
       :dry_run,
       :ignore_roles,
-      :output
+      :output_dir,
+      :timestamp,
+      :name,
+      :migration
     )
       def self.default
         self.new(
@@ -29,6 +32,9 @@ module PgDiff
           nil,
           false,
           [],
+          nil,
+          Time.now.strftime('%Y%m%d%H%M%S'),
+          "new-migration",
           nil
         )
       end

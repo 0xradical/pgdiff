@@ -54,8 +54,14 @@ module PgDiff
           opts.on("--target-user USER", "Target db user") do |opt|
             args.target_user = opt
           end
-          opts.on("--output [FILE]", "Optional output file (default: stdout)") do |opt|
-            args.output = opt
+          opts.on("--migration [MIGRATION]", "Optional table-referenced column to insert a new migration timestamp into (example: schema_migrations.value)") do |opt|
+            args.migration = opt
+          end
+          opts.on("--output-dir [OUTPUT-DIR]", "Optional output directory (default: stdout)") do |opt|
+            args.output_dir = opt
+          end
+          opts.on("--name [NAME]", "Optional migration name (default: new-migration)") do |opt|
+            args.name = opt
           end
         end
 
