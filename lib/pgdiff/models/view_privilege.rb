@@ -28,6 +28,8 @@ module PgDiff
         @view = view
         super(data)
 
+        view.add_privilege(self)
+
         world.add_dependency(
           PgDiff::Dependency.new(
             self,

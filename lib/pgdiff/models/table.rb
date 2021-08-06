@@ -27,15 +27,7 @@ module PgDiff
       end
 
       def to_s
-        %Q{
-          TABLE #{name}
-          #{columns.map(&:to_s).join("\n") if columns.length > 0}
-          #{sequences.map(&:to_s).join("\n") if sequences.length > 0}
-          #{constraints.map(&:to_s).join("\n") if constraints.length > 0}
-          #{indexes.map(&:to_s).join("\n") if indexes.length > 0}
-          #{options.map(&:to_s).join("\n") if options.length > 0}
-          #{privilege.to_s if privilege}
-        }
+        %Q{TABLE #{name}}
       end
 
       def find_column(name)
@@ -87,9 +79,7 @@ module PgDiff
           %Q{#{index.indexdef};}
         end.join("\n") +
         "\n\n" +
-        privileges.map do |privilege|
-          privilege.add
-        end.join("\n")
+        privilege.add
       end
 
       def remove

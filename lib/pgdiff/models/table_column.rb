@@ -20,6 +20,7 @@ module PgDiff
         @table = table
         super(data)
 
+        table.add_column(self)
 
         world.add_dependency(
           PgDiff::Dependency.new(
@@ -91,10 +92,7 @@ module PgDiff
       end
 
       def gid
-        "
-        TABLE COLUMN #{name}
-        ON #{table.name}
-        "
+        "TABLE COLUMN #{name} ON #{table.name}"
       end
 
       def to_s

@@ -1,11 +1,11 @@
 module PgDiff
   module Models
     class View < Base
-      attr_reader :privileges
+      attr_reader :privilege
 
       def initialize(data)
         super(data)
-        @privileges = []
+        @privilege = nil
       end
 
       def materialized?
@@ -21,17 +21,11 @@ module PgDiff
       end
 
       def to_s
-        %Q{
-          #{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name}
-          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
-        }
+        %Q{#{materialized? ? 'MATERIALIZED VIEW' : 'VIEW'} #{name}}
       end
 
-      def add_privileges(data)
-        data.each do |p|
-          privilege = Models::ViewPrivilege.new(p, self)
-          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
-        end
+      def add_privilege(privilege)
+        @privilege = privilege
       end
 
       def add

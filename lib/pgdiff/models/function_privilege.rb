@@ -18,6 +18,8 @@ module PgDiff
         @function = function
         super(data)
 
+        function.add_privilege(self)
+
 
         world.add_dependency(
           PgDiff::Dependency.new(

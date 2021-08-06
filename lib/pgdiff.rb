@@ -1,4 +1,5 @@
 require "pg"
+require "pry"
 
 module PgDiff; end
 
@@ -52,5 +53,5 @@ end
 def PgDiff.compare(source, target)
   tree = PgDiff::DependencyTree.new
   diff = tree.diff(source, target)
-  diff.to_sql
+  diff.ops
 end

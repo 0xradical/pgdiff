@@ -90,7 +90,6 @@ module PgDiff
 
     def table_columns
       query(%Q{SELECT
-      distinct on (n.nspname, c.relname, attrelid, a.attnum)
       a.attname,
       a.attnotnull,
       tn.nspname,
@@ -110,7 +109,7 @@ module PgDiff
           ELSE null
       END AS scale,
       '#{label}' AS origin,
-      n.nspname,
+      n.nspname AS tnspname,
       c.relname,
       attrelid,
       a.attnum,
@@ -121,6 +120,7 @@ module PgDiff
     LEFT JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
     INNER JOIN pg_class c ON attrelid = c."oid"
     INNER JOIN pg_namespace n ON c.relnamespace = n."oid"
+    INNER JOIN pg_tables tab ON tab.tablename = c.relname AND tab.schemaname = n.nspname
     WHERE attnum > 0 AND attisdropped = false
     ORDER BY n.nspname, c.relname, attrelid, a.attnum ASC;
       });

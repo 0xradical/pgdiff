@@ -28,6 +28,7 @@ module PgDiff
         @table = table
         super(data)
 
+        table.add_privilege(self)
 
         world.add_dependency(
           PgDiff::Dependency.new(

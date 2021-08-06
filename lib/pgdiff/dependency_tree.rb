@@ -132,11 +132,11 @@ module PgDiff
           acc
         else
           acc.merge({ member => [
-            source.find_by_gid(member),
-            target.find_by_gid(member)
+            sobject,
+            tobject
           ]})
         end
-      end
+      end.select{|k,(s,t)| s || t }
     end
 
     def intersperse(a, b)

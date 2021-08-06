@@ -20,12 +20,7 @@ module PgDiff
       end
 
       def to_s
-        %Q{
-          FUNCTION #{name}(#{argtypes})
-          #{
-            privileges.map(&:to_s).join("\n") if privileges.length > 0
-           }
-        }
+        %Q{FUNCTION #{name}(#{argtypes})}
       end
 
       def world_type
@@ -35,10 +30,8 @@ module PgDiff
       def add
         return "" if extension_function == "t"
 
-        %Q{#{definition};\n} +
-        privileges.map do |privilege|
-          privilege.add
-        end.join("\n")
+        %Q{#{definition};\n#{privilege.add}\n}
+
       end
 
       def remove

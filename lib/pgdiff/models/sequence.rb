@@ -1,11 +1,11 @@
 module PgDiff
   module Models
     class Sequence < Base
-      attr_reader :privileges
+      attr_reader :privilege
 
       def initialize(data)
         super(data)
-        @privileges = []
+        @privilege = nil
       end
 
       def name
@@ -17,17 +17,11 @@ module PgDiff
       end
 
       def to_s
-        %Q{
-          SEQUENCE #{name}
-          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
-        }
+        %Q{SEQUENCE #{name}}
       end
 
-      def add_privileges(data)
-        data.each do |p|
-          privilege = Models::SequencePrivilege.new(p, self)
-          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
-        end
+      def add_privilege(privilege)
+        @privilege = privilege
       end
 
       def add
@@ -36,11 +30,10 @@ module PgDiff
   MINVALUE #{minimum_value}
   MAXVALUE #{maximum_value}
   START WITH #{start_value}
-  CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};\n
-        } +
-        privileges.map do |privilege|
-          privilege.add
-        end.join("\n")
+  CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};
+
+  #{privilege.add}
+}
       end
     end
   end

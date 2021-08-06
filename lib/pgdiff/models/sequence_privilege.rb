@@ -24,6 +24,8 @@ module PgDiff
         @sequence = sequence
         super(data)
 
+        sequence.add_privilege(self)
+
         world.add_dependency(
           PgDiff::Dependency.new(
             self,
