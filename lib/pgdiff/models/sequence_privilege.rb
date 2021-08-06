@@ -9,9 +9,21 @@ module PgDiff
 
       attr_reader :sequence
 
+      def self.new(data)
+        instance = allocate
+        sequence_id = data["objid"].split(".")[0]
+        if sequence_id && (sequence = PgDiff::World[data["origin"]].objects[sequence_id])
+          instance.send(:initialize, data, sequence)
+          instance
+        else
+          nil
+        end
+      end
+
       def initialize(data, sequence)
-        super(data)
         @sequence = sequence
+        super(data)
+
         world.add_dependency(
           PgDiff::Dependency.new(
             self,
@@ -25,8 +37,14 @@ module PgDiff
         "#{sequence_schema}.#{sequence_name}"
       end
 
-      def user
-        usename
+      def privileges
+        JSON.parse(@data['privileges']).reduce({}) do |acc, (k, h)|
+          acc.merge(k => h)
+        end
+      end
+
+      def users
+        privileges.keys
       end
 
       def world_type
@@ -39,11 +57,19 @@ module PgDiff
       end
 
       def gid
-        "SEQUENCE PRIVILEGE FOR #{user} ON #{sequence.name}"
+        "SEQUENCE PRIVILEGE ON #{sequence.name}"
       end
 
       def to_s
-        "SEQUENCE PRIVILEGE #{user} #{operations.join(", ")}"
+        %Q{
+          SEQUENCE PRIVILEGE ON #{sequence.name} #{
+            users.sort.map do |user|
+              privileges[user].sort_by {|k,v| k}.map do |k,v|
+                v ? "#{user} CAN #{k}" : "#{user} CANNOT #{k}"
+              end.join("\n")
+            end.join("\n")
+          }
+        }
       end
 
       def add
@@ -55,12 +81,6 @@ module PgDiff
             %Q{GRANT #{op.upcase} ON #{name} TO "#{user}";}
           end
         end.compact.join("\n")
-      end
-
-      def operations
-        OPERATIONS.map do |op|
-          @data[op] == "t" ? "CAN #{op.upcase} ON #{name}" : "CANNOT #{op.upcase} ON #{name}"
-        end
       end
     end
   end

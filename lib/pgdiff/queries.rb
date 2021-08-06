@@ -88,28 +88,41 @@ module PgDiff
       })
     end
 
-    def table_columns(table_name)
-      schema, table = schema_and_table(table_name)
-
-      query(%Q{SELECT a.attname, a.attnotnull, tn.nspname, (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity AS typname, t.oid as typeid, t.typcategory, ad.adbin, pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc, a.attidentity,
-                  CASE
-                      WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
-                      WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
-                      ELSE null
-                  END AS precision,
-                  CASE
-                      WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) & 65535
-                      ELSE null
-                  END AS scale,
-                  '#{label}' AS origin
-                  FROM pg_attribute a
-                  INNER JOIN pg_type t ON t.oid = a.atttypid
-          LEFT JOIN pg_attrdef ad on ad.adrelid = a.attrelid AND a.attnum = ad.adnum
-          LEFT JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
-          INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
-          INNER JOIN pg_class c ON c.relname = '#{table}' AND c.relnamespace = n."oid"
-                  WHERE attrelid = c."oid" AND attnum > 0 AND attisdropped = false
-          ORDER BY a.attnum ASC;
+    def table_columns
+      query(%Q{SELECT
+      distinct on (n.nspname, c.relname, attrelid, a.attnum)
+      a.attname,
+      a.attnotnull,
+      tn.nspname,
+      (pg_identify_object('pg_type'::regclass, t.oid, 0)).identity AS typname,
+      t.oid as typeid,
+      t.typcategory,
+      ad.adbin,
+      pg_get_expr(ad.adbin ,ad.adrelid ) as adsrc,
+       a.attidentity,
+      CASE
+          WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) >> 16
+          WHEN (t.typname = 'bpchar' or t.typname = 'varchar') AND a.atttypmod > 0 THEN a.atttypmod-4
+          ELSE null
+      END AS precision,
+      CASE
+          WHEN t.typname = 'numeric' AND a.atttypmod > 0 THEN (a.atttypmod-4) & 65535
+          ELSE null
+      END AS scale,
+      '#{label}' AS origin,
+      n.nspname,
+      c.relname,
+      attrelid,
+      a.attnum,
+      attrelid || '.' || a.attnum AS objid
+    FROM pg_attribute a
+    INNER JOIN pg_type t ON t.oid = a.atttypid
+    LEFT JOIN pg_attrdef ad on ad.adrelid = a.attrelid AND a.attnum = ad.adnum
+    LEFT JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+    INNER JOIN pg_class c ON attrelid = c."oid"
+    INNER JOIN pg_namespace n ON c.relnamespace = n."oid"
+    WHERE attnum > 0 AND attisdropped = false
+    ORDER BY n.nspname, c.relname, attrelid, a.attnum ASC;
       });
     end
 
@@ -187,20 +200,29 @@ module PgDiff
       })
     end
 
-    def table_privileges(table_name)
-      schema, table = schema_and_table(table_name)
-
+    def table_privileges
       query(%Q{
-        SELECT t.schemaname, t.tablename, u.usename, '#{label}' AS origin,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'SELECT') as select,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'INSERT') as insert,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'UPDATE') as update,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'DELETE') as delete,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'TRUNCATE') as truncate,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'REFERENCES') as references,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{table}"', 'TRIGGER') as trigger
-        FROM pg_tables t, pg_user u
-        WHERE t.schemaname = '#{schema}' and t.tablename='#{table}';
+        SELECT distinct on (t.schemaname, t.tablename, c.oid)
+        t.schemaname, t.tablename, '#{label}' AS origin,
+        jsonb_agg(
+          json_build_object(
+            u.usename,
+            jsonb_build_object(
+              'SELECT', HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'SELECT'),
+              'INSERT',  HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'INSERT'),
+              'UPDATE', HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'UPDATE'),
+              'DELETE', HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'DELETE'),
+              'TRUNCATE', HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'TRUNCATE'),
+              'REFERENCES',  HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'REFERENCES'),
+              'TRIGGER', HAS_TABLE_PRIVILEGE(u.usename, t.schemaname || '.' || t.tablename, 'TRIGGER')
+            )
+          )
+        ) AS privileges,
+        c.oid || '.p' AS objid
+        FROM pg_tables t, pg_user u, pg_namespace n, pg_class c
+        WHERE n.nspname = t.schemaname
+        AND c.relname = t.tablename
+        GROUP BY t.schemaname, t.tablename, c.oid;
       })
     end
 
@@ -222,20 +244,34 @@ module PgDiff
       })
     end
 
-    def view_privileges(view_name)
-      schema, view = schema_and_table(view_name)
-
+    def view_privileges
       query(%Q{
-        SELECT v.schemaname, v.viewname, u.usename, '#{label}' AS origin,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'SELECT') as select,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'INSERT') as insert,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'UPDATE') as update,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'DELETE') as delete,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRUNCATE') as truncate,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'REFERENCES') as references,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRIGGER') as trigger
-        FROM pg_views v, pg_user u
-        WHERE v.schemaname = '#{schema}' and v.viewname='#{view}';
+        SELECT
+          distinct on (v.schemaname, v.viewname, c.oid)
+          v.schemaname, v.viewname,'#{label}' AS origin,
+          jsonb_agg(
+            json_build_object(
+              u.usename,
+              jsonb_build_object(
+                'SELECT', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'SELECT'),
+                'INSERT',  HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'INSERT'),
+                'UPDATE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'UPDATE'),
+                'DELETE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'DELETE'),
+                'TRUNCATE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'TRUNCATE'),
+                'REFERENCES',  HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'REFERENCES'),
+                'TRIGGER', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.viewname, 'TRIGGER')
+              )
+            )
+          ) AS privileges,
+          c.oid || '.p' AS objid
+        FROM pg_views v, pg_user u, pg_namespace n, pg_class c
+        WHERE v.schemaname = n.nspname
+        AND v.viewname = c.relname AND c.relnamespace = n."oid"
+                AND c.oid NOT IN (
+                    SELECT d.objid
+                    FROM pg_depend d
+                    WHERE d.deptype = 'e')
+        GROUP BY v.schemaname, v.viewname, c.oid;
       })
     end
 
@@ -253,25 +289,34 @@ module PgDiff
       })
     end
 
-    def materialized_view_privileges(view_name)
-      schema, view = schema_and_table(view_name)
-
+    def materialized_view_privileges
       query(%Q{
-        SELECT v.schemaname, v.matviewname as viewname, u.usename, '#{label}' AS origin,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'SELECT') as select,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'INSERT') as insert,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'UPDATE') as update,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'DELETE') as delete,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRUNCATE') as truncate,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'REFERENCES') as references,
-        HAS_TABLE_PRIVILEGE(u.usename,'"#{schema}"."#{view}"', 'TRIGGER') as trigger
-        FROM pg_matviews v, pg_user u
-        WHERE v.schemaname = '#{schema}' and v.matviewname='#{view}';
+        SELECT
+          distinct on (v.schemaname, v.matviewname, c.oid)
+          v.schemaname, v.matviewname as viewname,'#{label}' AS origin,
+          jsonb_agg(
+            json_build_object(
+              u.usename,
+              jsonb_build_object(
+                'SELECT', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'SELECT'),
+                'INSERT',  HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'INSERT'),
+                'UPDATE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'UPDATE'),
+                'DELETE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'DELETE'),
+                'TRUNCATE', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'TRUNCATE'),
+                'REFERENCES',  HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'REFERENCES'),
+                'TRIGGER', HAS_TABLE_PRIVILEGE(u.usename, v.schemaname || '.' || v.matviewname, 'TRIGGER')
+              )
+            )
+          ) AS privileges,
+          c.oid || '.p' AS objid
+        FROM pg_matviews v, pg_user u, pg_namespace n, pg_class c
+        WHERE v.schemaname = n.nspname
+        AND v.matviewname = c.relname AND c.relnamespace = n."oid"
+        GROUP BY v.schemaname, v.matviewname, c.oid;
       })
     end
 
     def view_dependencies
-
       query(%Q{
         SELECT
         r.oid AS objid,
@@ -379,15 +424,23 @@ module PgDiff
       })
     end
 
-    def function_privileges(function_name, arg_types = "")
-      schema, function = schema_and_table(function_name)
-
+    def function_privileges
       query(%Q{
-        SELECT n.nspname as pronamespace, p.proname, u.usename, '#{label}' AS origin,
-        HAS_FUNCTION_PRIVILEGE(u.usename,'"#{schema}"."#{function}"(#{arg_types})','EXECUTE') as execute
-        FROM pg_proc p, pg_user u
-        INNER JOIN pg_namespace n ON n.nspname = '#{schema}'
-        WHERE p.proname='#{function}' AND p.pronamespace = n.oid;
+        SELECT
+        distinct on (n.nspname, p.proname, p.oid)
+        n.nspname as pronamespace, p.proname, '#{label}' AS origin,
+        p.oid || '.p' AS objid,
+        jsonb_agg(
+          json_build_object(
+            u.usename,
+            json_build_object(
+              'EXECUTE', HAS_FUNCTION_PRIVILEGE(u.usename, p.oid,'EXECUTE')
+            )
+          )
+        ) AS privileges
+        FROM pg_proc p, pg_user u, pg_namespace n
+        WHERE n.oid = p.pronamespace
+        GROUP BY n.nspname, p.proname, p.oid;
       })
     end
 
@@ -414,16 +467,24 @@ module PgDiff
       })
     end
 
-    def sequence_privileges(sequence_name)
-      schema, sequence = schema_and_table(sequence_name)
-
+    def sequence_privileges
       query(%Q{
-        SELECT s.sequence_schema, s.sequence_name, u.usename, NULL AS cache_value, '#{label}' AS origin,
-                    HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'SELECT') as select,
-                    HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'USAGE') as usage,
-                    HAS_SEQUENCE_PRIVILEGE(u.usename,'"#{schema}"."#{sequence}"', 'UPDATE') as update
-                    FROM information_schema.sequences s, pg_user u
-                    WHERE s.sequence_schema = '#{schema}' and s.sequence_name='#{sequence}';
+        SELECT distinct on (s.sequence_schema, s.sequence_name, c.oid)
+        s.sequence_schema, s.sequence_name, '#{label}' AS origin,
+        jsonb_agg(
+          json_build_object(
+            u.usename,
+            json_build_object(
+              'SELECT', HAS_SEQUENCE_PRIVILEGE(u.usename, s.sequence_schema || '.' || s.sequence_name, 'SELECT'),
+              'USAGE',  HAS_SEQUENCE_PRIVILEGE(u.usename, s.sequence_schema || '.' || s.sequence_name, 'USAGE'),
+              'UPDATE', HAS_SEQUENCE_PRIVILEGE(u.usename, s.sequence_schema || '.' || s.sequence_name, 'UPDATE')
+            )
+          )
+        ) AS privileges,
+        c.oid || '.p' AS objid
+        FROM information_schema.sequences s, pg_user u, pg_namespace ns, pg_class c
+        WHERE c.relname = s.sequence_name AND ns.nspname = s.sequence_schema
+        GROUP BY s.sequence_schema, s.sequence_name, c.oid;
       })
     end
 

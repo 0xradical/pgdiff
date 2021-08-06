@@ -15,6 +15,7 @@ module PgDiff
 
     attr_reader :objects, :classes, :dependencies,
                 :roles, :schemas, :tables, :views,
+                :columns, :privileges,
                 :functions, :aggregates, :sequences,
                 :domains, :domain_constraints, :enums, :types, :extensions, :triggers,
                 :indexes, :constraints, :gids, :unmapped, :rules
@@ -32,6 +33,8 @@ module PgDiff
       @aggregates         =  Hash.new
       @sequences          =  Hash.new
       @domains            =  Hash.new
+      @columns            =  Hash.new
+      @privileges         =  Hash.new
       @domain_constraints =  Hash.new
       @enums              =  Hash.new
       @types              =  Hash.new
@@ -63,6 +66,9 @@ module PgDiff
     end
     def add_table(table)
       @tables[table.name] ||= table
+    end
+    def add_tablecolumn(column)
+      @columns[column.gid] ||= column
     end
     def add_view(view)
       @views[view.name] ||= view
@@ -115,7 +121,7 @@ module PgDiff
     end
 
     def find_by_gid(gid)
-      @objects[@gids[gid]]
+      @objects[@gids[gid]] || @columns[gid]
     end
 
     def find(object)

@@ -28,6 +28,10 @@ module PgDiff
       self.class.new(object, @set.select{|dep| dep.type == type})
     end
 
+    def by_condition(condition)
+      self.class.new(object, @set.select{|dep| condition.call(dep) })
+    end
+
     def automatic
       self.class.new(object, by_type("automatic").set)
     end

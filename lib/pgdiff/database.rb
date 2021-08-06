@@ -34,17 +34,7 @@ module PgDiff
       case objclass.name
       when "PgDiff::Models::Table"
         objclass.new(objdata).tap do |table|
-          # columns are instrinsically connected to database and don't need
-          # to be represented as a dependency
-          table.add_columns(@queries.table_columns(table.name))
           table.add_options(@queries.table_options(table.name))
-
-          # privileges are virtual (don't have oids)
-          # they are "dropped" when tables are dropped
-          # but should be created (GRANT / REVOKE) explicitly when tables are created
-          # they are marked as a oncreate dependency
-          table.add_privileges(@queries.table_privileges(table.name))
-
           # only constraints and indexes have objid
           # so they should be added to world
           tconstraints = @queries.table_constraints(table.name)
@@ -66,20 +56,11 @@ module PgDiff
       when "PgDiff::Models::TableConstraint", "PgDiff::Models::TableIndex"
         objclass.new(objdata[0], objdata[1])
       when "PgDiff::Models::View"
-        objclass.new(objdata).tap do |view|
-          view.add_privileges(
-            view.materialized? ?  @queries.materialized_view_privileges(view.name) :
-                                  @queries.view_privileges(view.name)
-          )
-        end
+        objclass.new(objdata)
       when "PgDiff::Models::Function"
-        objclass.new(objdata).tap do |function|
-          function.add_privileges(@queries.function_privileges(function.name, function.argtypes))
-        end
+        objclass.new(objdata)
       when "PgDiff::Models::Sequence"
-        objclass.new(objdata).tap do |sequence|
-          sequence.add_privileges(@queries.sequence_privileges(sequence.name))
-        end
+        objclass.new(objdata)
       when "PgDiff::Models::Domain"
         objclass.new(objdata)
       when "PgDiff::Models::DomainConstraint"
@@ -128,7 +109,7 @@ module PgDiff
         # chain[-1] == object
         refobjid = chain[-2]
 
-        if refobjid
+        if object && refobjid
           referenced = @world.objects[refobjid]
 
           @world.add_dependency(
@@ -151,8 +132,10 @@ module PgDiff
         objclass = @world.classes[id]
 
         if objdata
-          @world.objects[id] = build_object(objdata, objclass)
-          @world.gids[@world.objects[id].gid] = id
+            @world.objects[id] = build_object(objdata, objclass)
+          if @world.gids[@world.objects[id]]
+            @world.gids[@world.objects[id].gid] = id
+          end
         end
       end
 
@@ -236,6 +219,19 @@ module PgDiff
           # original view
           view = @world.find_by_gid("VIEW #{op['viewname']}") || @world.find_by_gid("MATERIALIZED VIEW #{op['viewname']}")
 
+          # rule depend on each column
+          column = @world.find_by_gid("TABLE COLUMN #{op['columnname']} ON #{op['schemaname']}.#{op['tablename']}")
+
+          if column
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                view,
+                column,
+                "internal"
+              )
+            )
+          end
+
           # if rule depends on another view lol
           oview = @world.find_by_gid("VIEW #{op['schemaname']}.#{op['tablename']}") || @world.find_by_gid("MATERIALIZED VIEW #{op['schemaname']}.#{op['tablename']}")
           if oview
@@ -314,6 +310,9 @@ module PgDiff
           next
         end
       end
+
+      # remove objects that have no mapping...
+      @world.objects.select{|k,v| v.nil? }.each{|k,v| @world.objects.delete(k) }
     end
   end
 end

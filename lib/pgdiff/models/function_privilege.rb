@@ -3,9 +3,21 @@ module PgDiff
     class FunctionPrivilege < Base
       attr_reader :function
 
+      def self.new(data)
+        instance = allocate
+        function_id = data["objid"].split(".")[0]
+        if function_id && (function = PgDiff::World[data["origin"]].objects[function_id])
+          instance.send(:initialize, data, function)
+          instance
+        else
+          nil
+        end
+      end
+
       def initialize(data, function)
-        super(data)
         @function = function
+        super(data)
+
 
         world.add_dependency(
           PgDiff::Dependency.new(
@@ -20,8 +32,14 @@ module PgDiff
         "#{pronamespace}.#{proname}"
       end
 
-      def user
-        usename
+      def privileges
+        JSON.parse(@data['privileges']).reduce({}) do |acc, (k, h)|
+          acc.merge(k => h)
+        end
+      end
+
+      def users
+        privileges.keys
       end
 
       def world_type
@@ -34,11 +52,19 @@ module PgDiff
       end
 
       def gid
-        "FUNCTION PRIVILEGE FOR #{user} ON #{function.name}"
+        "FUNCTION PRIVILEGE ON #{function.name}(#{function.argtypes})"
       end
 
       def to_s
-        "FUNCTION PRIVILEGE #{user} #{execute == 't' ? 'CAN' : 'CANNOT'} EXECUTE #{function.name}(#{function.argtypes})"
+        %Q{
+          FUNCTION PRIVILEGE ON #{function.name}(#{function.argtypes}) #{
+            users.sort.map do |user|
+              privileges[user].sort_by {|k,v| k}.map do |k,v|
+                v ? "#{user} CAN #{k}" : "#{user} CANNOT #{k}"
+              end.join("\n")
+            end.join("\n")
+          }
+        }
       end
 
       def add

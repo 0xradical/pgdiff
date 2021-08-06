@@ -1,7 +1,7 @@
 module PgDiff
   module Models
     class Table < Base
-      attr_reader :columns, :constraints, :indexes, :options, :privileges, :sequences
+      attr_reader :columns, :constraints, :indexes, :options, :privilege, :sequences
 
       def initialize(data)
         super(data)
@@ -10,7 +10,7 @@ module PgDiff
         @constraints = []
         @indexes = []
         @options = []
-        @privileges = []
+        @privilege = nil
         @sequences = []
       end
 
@@ -34,7 +34,7 @@ module PgDiff
           #{constraints.map(&:to_s).join("\n") if constraints.length > 0}
           #{indexes.map(&:to_s).join("\n") if indexes.length > 0}
           #{options.map(&:to_s).join("\n") if options.length > 0}
-          #{privileges.map(&:to_s).join("\n") if privileges.length > 0}
+          #{privilege.to_s if privilege}
         }
       end
 
@@ -42,10 +42,12 @@ module PgDiff
         @by_columns[name]
       end
 
-      def add_columns(data)
-        data.each do |c|
-          @columns << (Models::TableColumn.new(c, self).tap{|m| @by_columns[m.name] = m })
-        end
+      def add_column(column)
+        @columns << (column.tap{|m| @by_columns[m.name] = m })
+      end
+
+      def add_privilege(privilege)
+        @privilege = privilege
       end
 
       def add_constraints(data)
@@ -63,13 +65,6 @@ module PgDiff
       def add_options(data)
         data.each do |c|
           @options << Models::TableOption.new(c, self)
-        end
-      end
-
-      def add_privileges(data)
-        data.each do |c|
-          privilege = Models::TablePrivilege.new(c, self)
-          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
         end
       end
 
@@ -102,16 +97,35 @@ module PgDiff
       end
 
       def change(target)
-        sqls = []
+        sql = []
 
-        added_columns = Set.new(columns.map(&:name)) - Set.new(target.columns.map(&:name))
-        removed_columns = Set.new(target.columns.map(&:name)) - Set.new(columns.map(&:name))
+        changeset(target).each do |gid, options|
+          case options[:op]
+          when :add
+            sql << world.find_by_gid(gid).add
+          when :remove
+            sql << target.world.find_by_gid(gid).remove
+          when :rename
+            sql << target.world.find_by_gid(gid).rename(options[:name])
+          when :diff
+            # sql << ?
+          end
+        end
+
+        sql.join("\n")
+      end
+
+      def changeset(target)
+        changes = Hash.new
+
+        added_columns = Set.new(columns.map(&:gid)) - Set.new(target.columns.map(&:gid))
+        removed_columns = Set.new(target.columns.map(&:gid)) - Set.new(columns.map(&:gid))
         renamed_columns = Set.new
 
         # detect rename (changed only the name)
         if added_columns.length > 0 && removed_columns.length > 0
           added_columns.to_a.product(removed_columns.to_a).select do |added, removed|
-            changeset = find_column(added).changeset(target.find_column(removed))
+            changeset = world.find_by_gid(added).changeset(target.world.find_by_gid(removed))
 
             if changeset.length == 1 && changeset.member?(:name)
               added_columns.delete(added)
@@ -125,31 +139,30 @@ module PgDiff
           end
         end
 
-        common_columns = (Set.new(columns.map(&:name)) | Set.new(target.map(&:name)))
+        common_columns = (Set.new(columns.map(&:gid)) | Set.new(target.map(&:gid)))
         common_columns = common_columns - added_columns
         common_columns = common_columns - removed_columns
         common_columns = common_columns - Set.new(renamed_columns.to_a.flatten)
 
         added_columns.each do |column|
-          sqls << find_column(column).add
+          changes[column] = { op: :add, from: self }
         end
 
         removed_columns.each do |column|
-          sqls << target.find_column(column).remove
+          changes[column] = { op: :remove, from: target }
         end
 
         renamed_columns.each do |o, n|
-          sqls << target.find_column(o).rename(n)
+          changes[o] = { op: :rename, from: target, name: n }
         end
 
         common_columns.select do |col|
-          find_column(col).to_s != target.find_column(col).to_s
+          world.find_by_gid(col).to_s != target.world.find_by_gid(col).to_s
         end.each do |column|
-          # binding.pry
-
+          changes[column] = { op: :diff, from: target }
         end
 
-        sqls.join("\n")
+        changes
       end
     end
   end

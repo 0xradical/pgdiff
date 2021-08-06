@@ -48,6 +48,10 @@ module PgDiff
         "-- Changes to #{self.class.name} (#{world_type} #{name}) not implemented"
       end
 
+      def changeset(from)
+        Hash.new
+      end
+
       # identity from pg_identify_object
       def world_id
         identity
@@ -56,10 +60,6 @@ module PgDiff
       # type from pg_identify_object
       def world_type
         raise "Not Implemented In #{self.class.name} Error"
-      end
-
-      def each
-        # NoOp
       end
 
       def method_missing(m, *a, &b)

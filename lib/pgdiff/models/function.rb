@@ -1,22 +1,18 @@
 module PgDiff
   module Models
     class Function < Base
-      attr_reader :privileges
+      attr_reader :privilege
 
       def initialize(data)
         super(data)
-        @privileges = []
       end
 
       def type
         "FUNCTION"
       end
 
-      def add_privileges(data)
-        data.each do |p|
-          privilege = Models::FunctionPrivilege.new(p, self)
-          @privileges << privilege unless PgDiff.args.ignore_roles.include?(privilege.user)
-        end
+      def add_privilege(privilege)
+        @privilege = privilege
       end
 
       def name
@@ -30,12 +26,6 @@ module PgDiff
             privileges.map(&:to_s).join("\n") if privileges.length > 0
            }
         }
-      end
-
-      def each
-        [ privileges ].each do |dependency|
-          dependency.each { |d| yield d }
-        end
       end
 
       def world_type

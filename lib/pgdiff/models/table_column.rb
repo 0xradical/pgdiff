@@ -5,9 +5,29 @@ module PgDiff
       # default_value_fn is set in a post-process step
       attr_accessor :default_value_fn
 
+      def self.new(data)
+        instance = allocate
+        table_id = data["objid"].split(".")[0]
+        if table_id && (table = PgDiff::World[data["origin"]].objects[table_id])
+          instance.send(:initialize, data, table)
+          instance
+        else
+          nil
+        end
+      end
+
       def initialize(data, table)
-        super(data)
         @table = table
+        super(data)
+
+
+        world.add_dependency(
+          PgDiff::Dependency.new(
+            self,
+            @table,
+            "internal"
+          )
+        )
       end
 
       def world_type
@@ -71,7 +91,10 @@ module PgDiff
       end
 
       def gid
-        "TABLE COLUMN #{name} ON #{table.name}"
+        "
+        TABLE COLUMN #{name}
+        ON #{table.name}
+        "
       end
 
       def to_s

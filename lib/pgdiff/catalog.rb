@@ -22,23 +22,41 @@ module PgDiff
       @query.tables.map do |data|
         @world.add_object(data, Models::Table)
       end
+      @query.table_privileges.map do |data|
+        @world.add_object(data, Models::TablePrivilege)
+      end
+      @query.table_columns.map do |data|
+        @world.add_object(data, Models::TableColumn)
+      end
       @query.view_dependencies.map do |data|
         @world.add_object(data, Models::Rule)
       end
       @query.views.map do |data|
         @world.add_object(data, Models::View)
       end
+      @query.view_privileges.map do |data|
+        @world.add_object(data, Models::ViewPrivilege)
+      end
       @query.materialized_views.map do |data|
         @world.add_object(data, Models::View)
       end
+      @query.materialized_view_privileges.map do |data|
+        @world.add_object(data, Models::ViewPrivilege)
+      end
       @query.functions.map do |data|
         @world.add_object(data, Models::Function)
+      end
+      @query.function_privileges.map do |data|
+        @world.add_object(data, Models::FunctionPrivilege)
       end
       @query.aggregates.map do |data|
         @world.add_object(data, Models::Aggregate)
       end
       @query.sequences.map do |data|
         @world.add_object(data, Models::Sequence)
+      end
+      @query.sequence_privileges.map do |data|
+        @world.add_object(data, Models::SequencePrivilege)
       end
       @query.enums.map do |data|
         @world.add_object(data, Models::Enum)

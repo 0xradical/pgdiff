@@ -13,9 +13,20 @@ module PgDiff
 
       attr_reader :view
 
+      def self.new(data)
+        instance = allocate
+        view_id = data["objid"].split(".")[0]
+        if view_id && (view = PgDiff::World[data["origin"]].objects[view_id])
+          instance.send(:initialize, data, view)
+          instance
+        else
+          nil
+        end
+      end
+
       def initialize(data, view)
-        super(data)
         @view = view
+        super(data)
 
         world.add_dependency(
           PgDiff::Dependency.new(
@@ -30,8 +41,14 @@ module PgDiff
         "#{schemaname}.#{viewname}"
       end
 
-      def user
-        usename
+      def privileges
+        JSON.parse(@data['privileges']).reduce({}) do |acc, (k, h)|
+          acc.merge(k => h)
+        end
+      end
+
+      def users
+        privileges.keys
       end
 
       def world_type
@@ -43,11 +60,19 @@ module PgDiff
       end
 
       def gid
-        "VIEW PRIVILEGE FOR #{user} ON #{view.name}"
+        "VIEW PRIVILEGE ON #{view.name}"
       end
 
       def to_s
-        "VIEW PRIVILEGE #{user} #{operations.join(", ")}"
+        %Q{
+          VIEW PRIVILEGE ON #{view.name} #{
+            users.sort.map do |user|
+              privileges[user].sort_by {|k,v| k}.map do |k,v|
+                v ? "#{user} CAN #{k}" : "#{user} CANNOT #{k}"
+              end.join("\n")
+            end.join("\n")
+          }
+        }
       end
 
       def add
@@ -59,12 +84,6 @@ module PgDiff
             %Q{GRANT #{op.upcase} ON #{name} TO "#{user}";}
           end
         end.compact.join("\n")
-      end
-
-      def operations
-        OPERATIONS.map do |op|
-          @data[op] == "t" ? "CAN #{op.upcase} ON #{name}" : "CANNOT #{op.upcase} ON #{name}"
-        end
       end
     end
   end
