@@ -67,6 +67,11 @@ CREATE TYPE app.provider_created_for AS ENUM (
   'system'
 );
 
+CREATE TYPE app.composite AS (
+  status app.api_key_status,
+  answer app.answers
+);
+
 CREATE TYPE app.provider_logo AS (
   id uuid,
   provider_id uuid,
@@ -95,11 +100,16 @@ CREATE OR REPLACE FUNCTION app.everything() RETURNS integer AS $$
   return 42;
 $$ LANGUAGE plv8;
 
+CREATE FUNCTION add(integer, integer) RETURNS integer
+    AS 'select $1 + $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
 
 CREATE TABLE app.user_accounts (
   id                      bigserial    PRIMARY KEY,
   email                   varchar      DEFAULT ''::varchar NOT NULL,
-  sign_in_count           integer      DEFAULT 0           NOT NULL,
+  sign_in_count           integer      DEFAULT 0           NOT NULL CHECK (add(sign_in_count,1) > 2),
   current_sign_in_at      timestamptz,
   last_sign_in_at         timestamptz,
   current_sign_in_ip      inet,

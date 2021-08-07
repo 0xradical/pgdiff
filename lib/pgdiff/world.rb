@@ -13,7 +13,7 @@ module PgDiff
       self[n.to_s]
     end
 
-    attr_reader :objects, :classes, :dependencies,
+    attr_reader :objects, :classes, :dependencies, :prerequisites,
                 :roles, :schemas, :tables, :views,
                 :columns, :privileges,
                 :functions, :aggregates, :sequences,
@@ -24,12 +24,8 @@ module PgDiff
       @objects            =  Hash.new
       @gids               =  Hash.new
       @classes            =  Hash.new
-      @dependencies       =  {
-        internal: Hash.new,
-        normal: Hash.new,
-        automatic: Hash.new,
-        oncreate: Hash.new
-      }
+      @dependencies       =  Hash.new
+      @prerequisites      =  Hash.new
       @roles              =  Hash.new
       @schemas            =  Hash.new
       @tables             =  Hash.new
@@ -61,11 +57,13 @@ module PgDiff
     end
 
     def add_dependency(dependency)
-      return if dependency.type == "extension"
-
-      @dependencies[dependency.type.to_sym][dependency.object.gid] ||= []
-      if !@dependencies[dependency.type.to_sym][dependency.object.gid].include?(dependency.referenced.gid)
-        @dependencies[dependency.type.to_sym][dependency.object.gid] << dependency.referenced.gid
+      @prerequisites[dependency.object.gid]      ||= []
+      @dependencies[dependency.referenced.gid] ||= []
+      if !@prerequisites[dependency.object.gid].include?(dependency.referenced.gid)
+        @prerequisites[dependency.object.gid] << dependency.referenced.gid
+      end
+      if !@dependencies[dependency.referenced.gid].include?(dependency.object.gid)
+        @dependencies[dependency.referenced.gid] << dependency.object.gid
       end
     end
     def add_role(role)
@@ -138,22 +136,44 @@ module PgDiff
       find_by_gid(object.gid)
     end
 
-    def graph(type)
+    def dependencies_graph
+      return @dependencies_graph if @graph
+
       error = nil
       begin
-        graph = Dagwood::DependencyGraph.new(@dependencies[type.to_sym])
+        graph = Dagwood::DependencyGraph.new(@dependencies)
         graph.order
-        graph
+        @dependencies_graph = graph
       rescue TSort::Cyclic => e
         error = e
         cycle = eval(error.message.gsub("topological sort failed:",""))
-        @dependencies[type.to_sym].delete(cycle.first)
+        @dependencies.delete(cycle.first)
         retry
       end
     end
 
-    def subgraph_for(gid, type = "normal")
-      graph(type).subgraph(gid)
+    def dependencies_subgraph_for(gid)
+      dependencies_graph.subgraph(gid)
+    end
+
+    def prerequisites_graph
+      return @prerequisites_graph if @graph
+
+      error = nil
+      begin
+        graph = Dagwood::DependencyGraph.new(@prerequisites)
+        graph.order
+        @prerequisites_graph = graph
+      rescue TSort::Cyclic => e
+        error = e
+        cycle = eval(error.message.gsub("topological sort failed:",""))
+        @prerequisites.delete(cycle.first)
+        retry
+      end
+    end
+
+    def prerequisites_subgraph_for(gid)
+      prerequisites_graph.subgraph(gid)
     end
   end
 end

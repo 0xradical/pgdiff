@@ -70,13 +70,19 @@ module PgDiff
       end
 
       def add
-        return "" if PgDiff.args.ignore_roles.include?(user)
+        sql = []
+        # return "" if PgDiff.args.ignore_roles.include?(user)
+        privileges.each do |user, privilege|
+          next if PgDiff.args.ignore_roles.include?(user)
 
-        if execute == 't'
-          %Q{GRANT EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) TO "#{user}";}
-        else
-          %Q{REVOKE EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) FROM "#{user}";}
+          if privilege["EXECUTE"]
+            sql <<  %Q{GRANT EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) TO "#{user}";}
+          else
+            sql << %Q{REVOKE EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) FROM "#{user}";}
+          end
         end
+
+        sql.join("\n")
       end
     end
   end

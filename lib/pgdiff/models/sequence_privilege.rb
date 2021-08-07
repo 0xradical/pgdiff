@@ -75,14 +75,20 @@ module PgDiff
       end
 
       def add
-        return "" if PgDiff.args.ignore_roles.include?(user)
+        sql = []
+        privileges.each do |user, user_privileges|
+          next if PgDiff.args.ignore_roles.include?(user)
 
-        %Q{REVOKE ALL PRIVILEGES ON #{name} FROM "#{user}";\n} +
-        OPERATIONS.map do |op|
-          if @data[op] == "t"
-            %Q{GRANT #{op.upcase} ON #{name} TO "#{user}";}
+          sql << %Q{REVOKE ALL PRIVILEGES ON #{name} FROM "#{user}";}
+
+          user_privileges.each_pair do |operation, can|
+            if can
+              sql << %Q{GRANT #{operation} ON #{name} TO "#{user}";}
+            end
           end
-        end.compact.join("\n")
+        end
+
+        sql.join("\n")
       end
     end
   end
