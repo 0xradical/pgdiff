@@ -12,20 +12,6 @@ module PgDiff
       @ops     = []
     end
 
-    def set_op(node, op, opts = {})
-      if @lastop[node.gid] == op
-        return true
-      else
-        @ops << { node: node, op: op }.merge(opts)
-        @lastop[node.gid] = op
-        return false
-      end
-    end
-
-    def get_op(node)
-      @lastop[node.gid]
-    end
-
     def self._prerequisites(node, p = [], c = Set.new)
       return if p.include?(node)
 
@@ -67,7 +53,7 @@ module PgDiff
     def self.dependencies(node, condition = proc {})
       p = []
       c = Set.new
-      _dependencies(node, p, c, condition = proc {})
+      _dependencies(node, p, c, condition)
       children = Hash.new
 
       c.each do |chain|
@@ -82,36 +68,35 @@ module PgDiff
       children.sort_by{|k,v| v.length}.map(&:first).reject{|n| n.gid == node.gid }
     end
 
-    def _add(node, added = Hash.new)
-      return if added[node.gid] = true
+    def _add(node, added = Hash.new(0))
+      return if added[node.gid] > 1
 
       self.class.prerequisites(node).each do |prior|
-        added[prior.gid] = true
+        added[prior.gid] += 1
         _add(prior, added)
       end
 
-      added[node.gid] = true
+      added[node.gid] += 1
 
       self.class.dependencies(node, proc{|d| d.type == "oncreate" }).each do |dep|
-        added[dep.gid] = true
+        added[dep.gid] += 1
         _add(dep, added)
       end
     end
 
-    def _remove(node)
-      return if @lastop[node.gid] == :remove
+    def _remove(node, removed = Hash.new(0))
+      return if removed[node.gid] > 1
 
-      self.class.dependencies(node, proc{|d| d.type == "internal" }).map do |prior|
-        set_op(prior, :remove)
-        _remove(prior)
+      self.class.dependencies(node, proc{|d| true }).map do |prior|
+        removed[prior.gid] += 1
+        _remove(prior, removed)
       end
 
-      set_op(node, :remove)
+      removed[node.gid] += 1
     end
 
-
     def tree_for(world)
-      added = Hash.new
+      added = Hash.new(0)
 
       world.objects.values.map do |node|
         _add(node, added)
@@ -120,37 +105,33 @@ module PgDiff
       added
     end
 
-
     def _diff(source, target)
-      source_tree   = tree_for(source).keys
-      target_tree   = tree_for(target).keys
-      interspersed  = intersperse(source_tree, target_tree).reduce(Hash.new) do |acc, member|
-        sobject = source.find_by_gid(member)
-        tobject = target.find_by_gid(member)
+      plan = Hash.new
 
-        if sobject && tobject && sobject.to_s == tobject.to_s
-          acc
+      tree_for(source).keys.each do |gid|
+        sobject = source.find_by_gid(gid)
+        tobject = target.find_by_gid(gid)
+
+        if sobject && tobject
+          if tobject.to_s != sobject.to_s
+            plan[gid] = :change
+          end
+        elsif sobject
+          plan[gid] = :add
         else
-          acc.merge({ member => [
-            sobject,
-            tobject
-          ]})
+          plan[gid] = :remove
         end
-      end.select{|k,(s,t)| s || t }
-    end
-
-    def intersperse(a, b)
-      s   = Set.new
-      idx = 0
-
-      loop do
-        s.add(a[idx]) if idx < a.length
-        s.add(b[idx]) if idx < b.length
-
-        idx += 1
-        break if idx > [ a.length, b.length ].max
       end
-      s
+
+      tree_for(target).keys.each do |gid|
+        sobject = source.find_by_gid(gid)
+
+        if !sobject && !plan[gid]
+          plan[gid] = :remove
+        end
+      end
+
+      plan
     end
 
     def diff(source, target)

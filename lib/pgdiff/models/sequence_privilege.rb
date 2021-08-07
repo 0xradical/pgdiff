@@ -40,8 +40,8 @@ module PgDiff
       end
 
       def privileges
-        JSON.parse(@data['privileges']).reduce({}) do |acc, (k, h)|
-          acc.merge(k => h)
+        JSON.parse(@data['privileges']).reduce({}) do |acc, h|
+          acc.merge(h.keys[0] => h.values[0])
         end
       end
 

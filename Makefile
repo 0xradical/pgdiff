@@ -1,4 +1,4 @@
-VERSION := 0.0.2
+VERSION := 0.0.3
 
 build:
 	@docker build -f Dockerfile . -t thiagobrandam/pgdiff:$(VERSION)
@@ -22,12 +22,16 @@ down:
 console: up
 	@bundle exec pry -r ./lib/pgdiff.rb -r ./bin/console.rb
 
+sql: up
+	@bundle exec ruby -r ./lib/pgdiff.rb -r ./bin/console.rb
+
 diff: up
 	@rm -f pgdiff.sql
 	@echo 'Generating pgdiff.sql'
-	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/diff.rb
+	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/test.rb
 	@echo 'Applying generated pgdiff.sql'
-	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql thiagobrandam/pgdiff sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
+	@cat pgdiff.sql
+	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql thiagobrandam/pgdiff:$(VERSION) sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
 
 test: up
 	@bundle exec rake test

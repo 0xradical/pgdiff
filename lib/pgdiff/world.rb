@@ -24,7 +24,12 @@ module PgDiff
       @objects            =  Hash.new
       @gids               =  Hash.new
       @classes            =  Hash.new
-      @dependencies       =  Hash.new
+      @dependencies       =  {
+        internal: Hash.new,
+        normal: Hash.new,
+        automatic: Hash.new,
+        oncreate: Hash.new
+      }
       @roles              =  Hash.new
       @schemas            =  Hash.new
       @tables             =  Hash.new
@@ -56,7 +61,12 @@ module PgDiff
     end
 
     def add_dependency(dependency)
-      @dependencies[dependency.hash] ||= dependency
+      return if dependency.type == "extension"
+
+      @dependencies[dependency.type.to_sym][dependency.object.gid] ||= []
+      if !@dependencies[dependency.type.to_sym][dependency.object.gid].include?(dependency.referenced.gid)
+        @dependencies[dependency.type.to_sym][dependency.object.gid] << dependency.referenced.gid
+      end
     end
     def add_role(role)
       @roles[role.name] ||= role
@@ -126,6 +136,24 @@ module PgDiff
 
     def find(object)
       find_by_gid(object.gid)
+    end
+
+    def graph(type)
+      error = nil
+      begin
+        graph = Dagwood::DependencyGraph.new(@dependencies[type.to_sym])
+        graph.order
+        graph
+      rescue TSort::Cyclic => e
+        error = e
+        cycle = eval(error.message.gsub("topological sort failed:",""))
+        @dependencies[type.to_sym].delete(cycle.first)
+        retry
+      end
+    end
+
+    def subgraph_for(gid, type = "normal")
+      graph(type).subgraph(gid)
     end
   end
 end

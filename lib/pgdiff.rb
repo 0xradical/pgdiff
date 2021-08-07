@@ -1,5 +1,5 @@
 require "pg"
-require "pry"
+require "dagwood"
 
 module PgDiff; end
 
@@ -35,7 +35,6 @@ require_relative "pgdiff/catalog.rb"
 require_relative "pgdiff/object.rb"
 require_relative "pgdiff/dependency.rb"
 require_relative "pgdiff/dependencies.rb"
-require_relative "pgdiff/dependency_tree.rb"
 require_relative "pgdiff/database.rb"
 require_relative "pgdiff/diff.rb"
 require_relative "pgdiff/cli/options.rb"
@@ -51,7 +50,6 @@ def PgDiff.args
 end
 
 def PgDiff.compare(source, target)
-  tree = PgDiff::DependencyTree.new
-  diff = tree.diff(source, target)
-  diff.ops
+  diff = PgDiff::Diff.new(source, target)
+  diff.to_sql
 end

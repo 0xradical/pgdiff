@@ -31,7 +31,7 @@ module PgDiff
     def connection; @pg; end
 
     def build_object(objdata, objclass)
-      case objclass.name
+      obj = case objclass.name
       when "PgDiff::Models::Table"
         objclass.new(objdata).tap do |table|
           table.add_options(@queries.table_options(table.name))
@@ -77,6 +77,8 @@ module PgDiff
       else
         objclass.new(objdata)
       end
+      (@world.gids[obj.gid] = obj.objid) if obj
+      obj
     end
 
     def setup
@@ -102,6 +104,7 @@ module PgDiff
           @world.gids[@world.objects[dep["objid"]].gid] = dep["objid"]
           @world.objects[dep["objid"]]
         else
+          @world.gids[objdata.gid] = objdata.objid
           objdata
         end
 
@@ -148,6 +151,13 @@ module PgDiff
           type = @world.types[column.type] || @world.enums[column.type] || @world.domains[column.type]
           @world.add_dependency(
             PgDiff::Dependency.new(
+              column,
+              type,
+              "normal"
+            )
+          )
+          @world.add_dependency(
+            PgDiff::Dependency.new(
               table,
               type,
               "normal"
@@ -162,6 +172,13 @@ module PgDiff
               function = @world.functions.values.select{|f| f.gid =~  /#{Regexp.escape(column.adsrc.sub("#{args})",''))}/}.first
               if function
                 column.default_value_fn = "#{function.name}(#{args})"
+                @world.add_dependency(
+                  PgDiff::Dependency.new(
+                    column,
+                    function,
+                    "normal"
+                  )
+                )
                 @world.add_dependency(
                   PgDiff::Dependency.new(
                     table,
