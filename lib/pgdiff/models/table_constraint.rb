@@ -48,6 +48,10 @@ module PgDiff
       def add
         ""
       end
+
+      def remove
+        %Q{ALTER TABLE #{table.name} DROP CONSTRAINT #{name};}
+      end
     end
   end
 end

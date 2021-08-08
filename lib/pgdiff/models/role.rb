@@ -18,10 +18,14 @@ module PgDiff
       end
 
       def add
+        return "" if PgDiff.args.ignore_roles.include?(name)
+
         %Q{CREATE ROLE "#{name}" #{rolinherit == 't' ? 'INHERIT' : 'NOINHERIT'} #{rolcanlogin == 't' ? 'LOGIN' : 'NOLOGIN'};}
       end
 
       def remove
+        return "" if PgDiff.args.ignore_roles.include?(name)
+
         %Q{DROP ROLE "#{name}";}
       end
     end

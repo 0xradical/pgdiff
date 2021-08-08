@@ -21,7 +21,7 @@ module PgDiff
       end
 
       def gid
-        "TABLE INDEX ON #{table.name}"
+        "TABLE INDEX #{indexname} ON #{table.name}"
       end
 
       def to_s
@@ -31,6 +31,13 @@ module PgDiff
       def add
         # "#{indexdef};"
         ""
+      end
+
+      def remove
+        # if there's a constraint for pkey don't do anything
+        return "" if world.find_by_gid("TABLE CONSTRAINT #{indexname} ON #{table.name}")
+
+        %Q{DROP INDEX #{identity};}
       end
     end
   end

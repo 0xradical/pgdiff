@@ -42,17 +42,25 @@ module PgDiff
         @privilege = privilege
       end
 
-      def add_constraints(data)
-        data.each do |c|
-          @constraints << Models::TableConstraint.new(c, self)
-        end
+      def add_constraint(constraint)
+        @constraints << constraint
       end
 
-      def add_indexes(data)
-        data.each do |c|
-          @indexes << Models::TableIndex.new(c, self)
-        end
+      def add_index(index)
+        @indexes << index
       end
+
+      # def add_constraints(data)
+      #   data.each do |c|
+      #     @constraints << Models::TableConstraint.new(c, self)
+      #   end
+      # end
+
+      # def add_indexes(data)
+      #   data.each do |c|
+      #     @indexes << Models::TableIndex.new(c, self)
+      #   end
+      # end
 
       def add_options(data)
         data.each do |c|

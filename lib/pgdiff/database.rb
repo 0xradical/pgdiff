@@ -49,12 +49,15 @@ module PgDiff
             @world.objects[ti["objid"]] = [ti,table]
             @world.classes[ti["objid"]] = PgDiff::Models::TableIndex
           end
-
-          table.add_constraints(tconstraints)
-          table.add_indexes(tindexes)
         end
       when "PgDiff::Models::TableConstraint", "PgDiff::Models::TableIndex"
-        objclass.new(objdata[0], objdata[1])
+        objclass.new(objdata[0], objdata[1]).tap do |o|
+          if objclass.name == "PgDiff::Models::TableConstraint"
+            objdata[1].add_constraint(o)
+          else
+            objdata[1].add_index(o)
+          end
+        end
       when "PgDiff::Models::View"
         objclass.new(objdata)
       when "PgDiff::Models::Function"

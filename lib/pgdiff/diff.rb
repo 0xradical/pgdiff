@@ -17,6 +17,7 @@ module PgDiff
     end
 
     def add_plan(gid, operation, changeop = :noop)
+      raise "GID is not a string" unless gid.is_a?(String)
       return if @plan[gid][:position] >= 0
 
       @plan[gid][operation] = true
@@ -26,6 +27,10 @@ module PgDiff
 
     def added?(gid)
       @plan[gid][:added]
+    end
+
+    def skipped?(gid)
+      @plan[gid][:skipped]
     end
 
     def removed?(gid)
@@ -74,7 +79,7 @@ module PgDiff
     end
 
     def add(gid, sql)
-      return if added?(gid) || common?(gid)
+      return if skipped?(gid) || added?(gid) || common?(gid)
 
       node = source.find_by_gid(gid)
       if !node
@@ -94,7 +99,7 @@ module PgDiff
     end
 
     def remove(gid, sql)
-      return if removed?(gid) || common?(gid)
+      return if skipped?(gid) || removed?(gid) || common?(gid)
 
       node = target.find_by_gid(gid)
       if !node
@@ -104,11 +109,38 @@ module PgDiff
       end
 
       add_plan(gid, :removed)
-      node.dependencies.others_depend_on_me.by_type("internal").objects.each do |object|
+
+      node.dependencies.others_depend_on_me.by_condition(proc{|d| d.type == "internal" || d.type == "normal"}).objects.each do |object|
         remove(object.gid, sql)
       end
+
+      remove_TABLE_dependencies(node, sql) if node.class.name == "PgDiff::Models::Table"
+
       sql << header("Removing #{gid}")
       sql << sql_line(node.remove)
+    end
+
+    def remove_TABLE_dependencies(table, sql)
+      table.constraints.each do |ctt|
+        target.dependencies_subgraph_for(ctt.gid).order[0..-2].select do |dep|
+          dep !~ /RI_ConstraintTrigger/
+        end.each do |dep|
+          remove(dep, sql)
+        end
+      end
+      table.indexes.each do |idx|
+        target.dependencies_subgraph_for(idx.gid).order[0..-2].select do |dep|
+          dep !~ /RI_ConstraintTrigger/
+        end.each do |dep|
+          remove(dep, sql)
+        end
+      end
+      table.constraints.each do |ctt|
+        remove(ctt.gid, sql)
+      end
+      table.indexes.each do |idx|
+        remove(idx.gid, sql)
+      end
     end
 
     def change(gid, op, sql, &blk)
@@ -250,6 +282,7 @@ module PgDiff
       end
 
       to_be_removed(:tables).select do |table|
+        binding.pry if table == "TABLE app.sub_categories_topics"
         remove(table, sql)
       end
 
