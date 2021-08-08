@@ -30,8 +30,7 @@ module PgDiff
       def add
         return "" if extension_function == "t"
 
-        %Q{#{definition};\n#{privilege.add}\n}
-
+        %Q{#{definition};\n}
       end
 
       def remove

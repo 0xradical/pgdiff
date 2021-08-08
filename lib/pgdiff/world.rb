@@ -13,14 +13,15 @@ module PgDiff
       self[n.to_s]
     end
 
-    attr_reader :objects, :classes, :dependencies, :prerequisites,
+    attr_reader :database, :objects, :classes, :dependencies, :prerequisites,
                 :roles, :schemas, :tables, :views,
                 :columns, :privileges,
                 :functions, :aggregates, :sequences,
                 :domains, :domain_constraints, :enums, :types, :extensions, :triggers,
                 :indexes, :constraints, :gids, :unmapped, :rules
 
-    def initialize
+    def initialize(database)
+      @database           =  database
       @objects            =  Hash.new
       @gids               =  Hash.new
       @classes            =  Hash.new

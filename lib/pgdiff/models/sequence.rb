@@ -30,10 +30,7 @@ module PgDiff
   MINVALUE #{minimum_value}
   MAXVALUE #{maximum_value}
   START WITH #{start_value}
-  CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};
-
-  #{privilege.add}
-}
+  CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};}
       end
     end
   end

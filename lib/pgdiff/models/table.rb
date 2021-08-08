@@ -78,31 +78,11 @@ module PgDiff
         indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
           %Q{#{index.indexdef};}
         end.join("\n") +
-        "\n\n" +
-        privilege.add
+        "\n\n"
       end
 
       def remove
         %Q{DROP TABLE #{name};}
-      end
-
-      def change(target)
-        sql = []
-
-        changeset(target).each do |gid, options|
-          case options[:op]
-          when :add
-            sql << world.find_by_gid(gid).add
-          when :remove
-            sql << target.world.find_by_gid(gid).remove
-          when :rename
-            sql << target.world.find_by_gid(gid).rename(options[:name])
-          when :diff
-            # sql << ?
-          end
-        end
-
-        sql.join("\n")
       end
 
       def changeset(target)
@@ -143,7 +123,7 @@ module PgDiff
         end
 
         renamed_columns.each do |o, n|
-          changes[o] = { op: :rename, from: target, name: n }
+          changes[o] = { op: :rename, from: target, source: n }
         end
 
         common_columns.select do |col|

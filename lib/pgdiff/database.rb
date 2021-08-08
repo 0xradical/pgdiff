@@ -82,7 +82,7 @@ module PgDiff
     end
 
     def setup
-      @world   ||= (PgDiff::World[@label] = PgDiff::World.new)
+      @world   ||= (PgDiff::World[@label] = PgDiff::World.new(self))
       puts "Cataloguing objects from database #{@label}..."
       @catalog ||= PgDiff::Catalog.new(@pg, @label)
       @queries ||= PgDiff::Queries.new(@pg, @label)

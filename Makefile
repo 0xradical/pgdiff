@@ -32,6 +32,10 @@ diff: up
 	@echo 'Applying generated pgdiff.sql'
 	@cat pgdiff.sql
 	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql thiagobrandam/pgdiff:$(VERSION) sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
+	@echo 'Generating another pgdiff.sql to compare'
+	@mv pgdiff.sql pgdiff.initial.sql
+	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/test.rb
+	@cat pgdiff.sql
 
 test: up
 	@bundle exec rake test

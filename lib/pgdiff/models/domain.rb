@@ -31,12 +31,7 @@ module PgDiff
       end
 
       def to_s
-        %Q{
-          DOMAIN #{name} AS #{data_type} #{'NOT NULL' if not_null == 't'} #{'DEFAULT ' + default if default}
-          #{
-            constraints.map(&:to_s).join("\n") if constraints.length > 0
-          }
-        }
+        %Q{DOMAIN #{name} AS #{data_type} #{'NOT NULL' if not_null == 't'} #{'DEFAULT ' + default if default}}
       end
 
       def add

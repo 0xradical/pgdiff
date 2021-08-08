@@ -136,3 +136,11 @@ CREATE TABLE app.admin_accounts (
   created_at              timestamptz  DEFAULT NOW()       NOT NULL,
   updated_at              timestamptz  DEFAULT NOW()       NOT NULL
 );
+
+CREATE VIEW api.admin_accounts AS (
+  SELECT * FROM app.admin_accounts
+);
+
+CREATE UNIQUE INDEX index_email_on_users
+ON app.user_accounts
+USING btree (email);

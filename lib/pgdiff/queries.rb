@@ -244,6 +244,15 @@ module PgDiff
       })
     end
 
+    def get_current_view_definition(oid)
+      query(%{
+        SELECT definition FROM pg_views v
+        INNER JOIN pg_namespace n ON v.schemaname = n.nspname
+        INNER JOIN pg_class c ON v.viewname = c.relname AND c.relnamespace = n."oid"
+        WHERE c.oid = #{oid};
+      })
+    end
+
     def view_privileges
       query(%Q{
         SELECT
