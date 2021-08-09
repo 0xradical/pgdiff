@@ -255,7 +255,6 @@ module PgDiff
           when :elements
             presql << senum.change(tenum)
           end
-
           add_plan(senum.gid, :changed, :change)
           add_plan(tenum.gid, :changed, :change)
         end
@@ -272,7 +271,16 @@ module PgDiff
       end
 
       to_be_changed(:aggregates).select do |gid|
-        pending(gid, :change, sql)
+        saggregate = source.find_by_gid(gid)
+        taggregate = target.find_by_gid(gid)
+        saggregate.changeset(taggregate).each_pair do |k, _|
+          case k
+          when :definition
+            pending(gid, :change, sql)
+          end
+          add_plan(saggregate.gid, :changed, :change)
+          add_plan(taggregate.gid, :changed, :change)
+        end
       end
 
       puts "Diffing other types"
@@ -285,8 +293,17 @@ module PgDiff
         remove(type, sql)
       end
 
-      to_be_changed(:types).select do |type|
-        pending(type, :change, sql)
+      to_be_changed(:types).select do |gid|
+        stype = source.find_by_gid(gid)
+        ttype = target.find_by_gid(gid)
+        stype.changeset(ttype).each_pair do |k, _|
+          case k
+          when :definition
+            pending(gid, :change, sql)
+          end
+          add_plan(stype.gid, :changed, :change)
+          add_plan(ttype.gid, :changed, :change)
+        end
       end
 
       puts "Diffing domains"
@@ -301,8 +318,23 @@ module PgDiff
         remove(domain, sql)
       end
 
-      to_be_changed(:domains).select do |domain|
-        pending(domain, :change, sql)
+      to_be_changed(:domains).select do |gid|
+        sdomain = source.find_by_gid(gid)
+        tdomain = target.find_by_gid(gid)
+        sdomain.changeset(tdomain).each_pair do |k, _|
+          case k
+          when :name
+            change(gid, :rename, sql) do |_, tnode|
+              sql << sql_line(tdomain.rename(sdomain.name))
+            end
+          when :schema
+            change(gid, :set_schema, sql) do |_, tnode|
+              sql << sql_line(tdomain.set_schema(sdomain.schema))
+            end
+          end
+          add_plan(sdomain.gid, :changed, :change)
+          add_plan(tdomain.gid, :changed, :change)
+        end
       end
 
       puts "Diffing sequences"
@@ -315,8 +347,14 @@ module PgDiff
         remove(sequence, sql)
       end
 
-      to_be_changed(:sequences).select do |sequence|
-        pending(sequence, :change, sql)
+      to_be_changed(:sequences).select do |gid|
+        ssequence = source.find_by_gid(gid)
+        tsequence = target.find_by_gid(gid)
+        ssequence.changeset(tsequence).each_pair do |k, _|
+          pending(gid, k, sql)
+          add_plan(ssequence.gid, :changed, :change)
+          add_plan(tsequence.gid, :changed, :change)
+        end
       end
 
       puts "Diffing tables"

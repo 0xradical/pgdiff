@@ -21,6 +21,16 @@ module PgDiff
         JSON.parse(@data['columns'])
       end
 
+      def changeset(target)
+        changes = Hash.new
+
+        return changes if from_extension == "t"
+        return changes if columns.empty?
+        return changes if category == "A"
+
+        changes
+      end
+
       def add
         return "" if category == "A"
         return "" if columns.empty?

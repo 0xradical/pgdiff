@@ -32,6 +32,12 @@ module PgDiff
   START WITH #{start_value}
   CACHE #{cache_size} #{cycle_option == "f" ? 'NO CYCLE' : 'CYCLE'};}
       end
+
+      def changeset(target)
+        changes =  Hash.new
+
+        changes
+      end
     end
   end
 end

@@ -12,6 +12,16 @@ module PgDiff
         }
       end
 
+      def changeset(target)
+        changes = Hash.new
+
+        if definition != target.definition
+          changes[:definition] = {}
+        end
+
+        changes
+      end
+
       def world_type
         "AGGREGATE"
       end

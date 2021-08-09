@@ -44,6 +44,14 @@ module PgDiff
         %Q{DROP DOMAIN #{name};}
       end
 
+      def rename(newname)
+        %Q{ALTER DOMAIN #{name} RENAME TO #{name};}
+      end
+
+      def set_schema(newschema)
+        %Q{ALTER DOMAIN #{name} SET SCHEMA #{schema};}
+      end
+
       #     ALTER DOMAIN name
       #     { SET DEFAULT expression | DROP DEFAULT }
       # ALTER DOMAIN name
@@ -62,18 +70,20 @@ module PgDiff
       #     RENAME TO new_name
       # ALTER DOMAIN name
       #     SET SCHEMA new_schema
-      def change(target)
-        sqls = []
+      def changeset(target)
+        changes = Hash.new
+
+        return changes if from_extension == "t"
 
         if target.name != name
-          sqls << %Q{ALTER DOMAIN #{target.name} RENAME TO #{name};}
+          changes[:name] = { name: name }
         end
 
         if target.schema != schema
-          sqls << %Q{ALTER DOMAIN #{target.name} SET SCHEMA #{schema};}
+          changes[:schema] = { schema: schema }
         end
 
-        sqls.join("\n")
+        changes
       end
     end
   end
