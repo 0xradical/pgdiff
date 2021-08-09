@@ -460,11 +460,20 @@ module PgDiff
         sview = source.find_by_gid(view)
         tview = target.find_by_gid(view)
 
-        if sview.definition == tview.definition
-          add_plan(view, :skipped)
-        else
+        if sview.definition != tview.definition
           remove(view, sql)
-          add(view, sql)
+          if sview
+            something_changed = sview.dependencies.i_depend_on.referenced.reduce(false) do |changed, ref|
+              changed || @plan[ref.gid][:changed] || @plan[ref.gid][:removed]
+            end
+
+            if something_changed
+              sql << %Q{-- #{view} cannot be inserted because some of its dependencies changed in the current transaction, skipping ...}
+              add_plan(view, :skipped)
+            else
+              add(view, sql)
+            end
+          end
         end
       end
 
