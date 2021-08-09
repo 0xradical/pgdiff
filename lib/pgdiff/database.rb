@@ -66,6 +66,34 @@ module PgDiff
         objclass.new(objdata)
       when "PgDiff::Models::Domain"
         objclass.new(objdata)
+      when "PgDiff::Models::Trigger"
+        objclass.new(objdata).tap do |trigger|
+          table = @world.find_by_gid("TABLE #{trigger.table_schema}.#{trigger.table_name}")
+          if table
+            trigger.table = table
+            table.add_trigger(trigger)
+
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                trigger,
+                table,
+                "normal"
+              )
+            )
+          end
+
+          view = @world.find_by_gid("VIEW #{trigger.table_schema}.#{trigger.table_name}") || @world.find_by_gid("MATERIALIZED VIEW #{trigger.table_schema}.#{trigger.table_name}")
+          if view
+            trigger.view = view
+            @world.add_dependency(
+              PgDiff::Dependency.new(
+                trigger,
+                view,
+                "normal"
+              )
+            )
+          end
+        end
       when "PgDiff::Models::DomainConstraint"
         domain = @world.find_by_gid("TYPE #{objdata['domain_name']}")
         if domain
@@ -328,6 +356,19 @@ module PgDiff
           end
         rescue
           next
+        end
+      end
+
+      puts "Adding column dependencies on triggers"
+      @world.triggers.values.each do |trigger|
+        trigger.columns.each do |col|
+          @world.add_dependency(
+            PgDiff::Dependency.new(
+              trigger,
+              col,
+              "normal"
+            )
+          )
         end
       end
 

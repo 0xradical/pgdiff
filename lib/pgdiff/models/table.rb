@@ -1,7 +1,7 @@
 module PgDiff
   module Models
     class Table < Base
-      attr_reader :columns, :constraints, :indexes, :options, :privilege, :sequences
+      attr_reader :columns, :constraints, :indexes, :options, :privilege, :sequences, :triggers
 
       def initialize(data)
         super(data)
@@ -12,6 +12,7 @@ module PgDiff
         @options = []
         @privilege = nil
         @sequences = []
+        @triggers = []
       end
 
       def name
@@ -48,6 +49,10 @@ module PgDiff
 
       def add_index(index)
         @indexes << index
+      end
+
+      def add_trigger(trigger)
+        @triggers << trigger
       end
 
       # def add_constraints(data)

@@ -679,6 +679,7 @@ module PgDiff
             (pg_identify_object('pg_trigger'::regclass, tg.oid, 0)).identity,
             tg.oid as objid,
             (tg.oid in (select * from extension_oids)) as from_extension,
+            tg.tgattr,
             '#{label}' AS origin
         from pg_trigger tg
         join pg_class cls on cls.oid = tg.tgrelid
