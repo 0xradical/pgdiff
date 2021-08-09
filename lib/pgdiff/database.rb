@@ -359,8 +359,16 @@ module PgDiff
         end
       end
 
-      puts "Adding column dependencies on triggers"
+      puts "Adding trigger dependencies on #{@label} ..."
       @world.triggers.values.each do |trigger|
+        @world.add_dependency(
+          PgDiff::Dependency.new(
+            trigger,
+            trigger.function,
+            "normal"
+          )
+        )
+
         trigger.columns.each do |col|
           @world.add_dependency(
             PgDiff::Dependency.new(

@@ -8,15 +8,19 @@ module PgDiff
       end
 
       def to_s
-        %Q{TRIGGER #{name} ON #{table_schema}.#{table_name} TO EXECUTE #{proc_schema}.#{proc_name}(#{proc_argtypes})}
+        %Q{TRIGGER #{@data['name']} ON #{table_schema}.#{table_name} TO EXECUTE #{proc_schema}.#{proc_name}(#{proc_argtypes})}
       end
 
       def add
         %Q{#{definition};}
       end
 
+      def gid
+        definition
+      end
+
       def remove
-        %Q{DROP TRIGGER IF EXISTS #{name} ON #{table_schema}.#{table_name};}
+        %Q{DROP TRIGGER IF EXISTS #{@data['name']} ON #{table_schema}.#{table_name};}
       end
 
       def columns
@@ -25,6 +29,10 @@ module PgDiff
         end
       rescue
         []
+      end
+
+      def function
+        world.objects[tgfoid]
       end
 
       def world_type
