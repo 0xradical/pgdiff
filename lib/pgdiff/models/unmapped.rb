@@ -32,6 +32,8 @@ module PgDiff
       def system?
         return true if name =~ /\A(pg_toast)\./
         return true if gid =~ /OPERATOR public\./
+        return true if gid =~ /RI_ConstraintTrigger/
+        return true if world_type == "TYPE" && world.find_by_gid("TABLE #{name}")
 
         false
       end

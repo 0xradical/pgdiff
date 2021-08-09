@@ -250,7 +250,6 @@ module PgDiff
       to_be_changed(:enums).each do |gid|
         senum = source.find_by_gid(gid)
         tenum = target.find_by_gid(gid)
-        binding.pry if senum.elements.join("|") != tenum.elements.join("|")
 
         senum.changeset(tenum).each_pair do |k, _|
           case k
@@ -402,7 +401,10 @@ module PgDiff
               add_plan(snode.gid, :changed, options[:op])
             end
           else
-            pending(gid, options[:op], sql)
+            change(gid, options[:op], sql) do |snode, tnode|
+              sql << sql_line(options[:sql])
+              add_plan(snode.gid, :changed, options[:op])
+            end
           end
         end
       end

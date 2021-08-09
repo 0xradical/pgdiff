@@ -142,7 +142,44 @@ module PgDiff
         common_columns.select do |col|
           world.find_by_gid(col).to_s != target.world.find_by_gid(col).to_s
         end.each do |column|
-          changes[column] = { op: :diff, from: target }
+          clauses = []
+          sql     = "-- Changes for #{column} not implemented"
+
+          scolumn = world.find_by_gid(column)
+          tcolumn = target.world.find_by_gid(column)
+
+          if scolumn.type != tcolumn.type
+            if scolumn.type == "pg_catalog.uuid"
+              if tcolumn.default_value
+                clauses << %Q{ALTER COLUMN #{tcolumn.name} DROP DEFAULT}
+              end
+              clauses << %Q{ALTER COLUMN #{tcolumn.name} SET DATA TYPE #{scolumn.type} USING (uuid_generate_v4())}
+            else
+              clauses << %Q{ALTER COLUMN #{tcolumn.name} SET DATA TYPE #{scolumn.type}}
+            end
+          end
+
+          if scolumn.default_value && (!tcolumn.default_value || tcolumn.default_value != scolumn.default_value)
+            clauses << %Q{ALTER COLUMN #{tcolumn.name} SET DEFAULT #{scolumn.default_value}}
+          end
+
+          if !scolumn.default_value && tcolumn.default_value
+            clauses << %Q{ALTER COLUMN #{tcolumn.name} DROP DEFAULT}
+          end
+
+          if scolumn.not_null && !tcolumn.not_null
+            clauses << %Q{ALTER COLUMN #{tcolumn.name} SET NOT NULL}
+          end
+
+          if !scolumn.not_null && tcolumn.not_null
+            clauses << %Q{ALTER COLUMN #{tcolumn.name} DROP NOT NULL}
+          end
+
+          if clauses.length > 0
+            sql = "ALTER TABLE #{name} #{clauses.join(",\n")};"
+          end
+
+          changes[column] = { op: :diff, sql:  sql }
         end
 
         changes
