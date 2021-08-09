@@ -33,7 +33,12 @@ module PgDiff
         return true if name =~ /\A(pg_toast)\./
         return true if gid =~ /OPERATOR public\./
         return true if gid =~ /RI_ConstraintTrigger/
-        return true if world_type == "TYPE" && world.find_by_gid("TABLE #{name}")
+        return true if world_type == "TYPE" && (
+          world.find_by_gid("TABLE #{name}") ||
+          world.find_by_gid("MATERIALIZED VIEW #{name}") ||
+          world.find_by_gid("VIEW #{name}") ||
+          world.find_by_gid("SEQUENCE #{name}")
+        )
 
         false
       end

@@ -457,7 +457,15 @@ module PgDiff
       end
 
       to_be_changed(:views).select do |view|
-        pending(view, :change, sql)
+        sview = source.find_by_gid(view)
+        tview = target.find_by_gid(view)
+
+        if sview.definition == tview.definition
+          add_plan(view, :skipped)
+        else
+          remove(view, sql)
+          add(view, sql)
+        end
       end
 
       puts "Diffing triggers"

@@ -38,6 +38,10 @@ module PgDiff
 
         changes
       end
+
+      def remove
+        ""
+      end
     end
   end
 end
