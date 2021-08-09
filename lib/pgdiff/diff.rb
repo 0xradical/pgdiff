@@ -186,6 +186,7 @@ module PgDiff
     def to_sql
       presql = []
       sql = []
+      postsql = []
 
       sql << sql_line("BEGIN;")
 
@@ -249,6 +250,7 @@ module PgDiff
       to_be_changed(:enums).each do |gid|
         senum = source.find_by_gid(gid)
         tenum = target.find_by_gid(gid)
+        binding.pry if senum.elements.join("|") != tenum.elements.join("|")
 
         senum.changeset(tenum).each_pair do |k, _|
           case k
@@ -415,8 +417,19 @@ module PgDiff
         remove(function, sql)
       end
 
-      to_be_changed(:functions).select do |function|
-        pending(function, :change, sql)
+      to_be_changed(:functions).select do |gid|
+        sfunction = source.find_by_gid(gid)
+        tfunction = target.find_by_gid(gid)
+        sfunction.changeset(tfunction).each_pair do |k, _|
+          case k
+          when :definition
+            change(gid, :definition, sql) do |_, tnode|
+              sql << sql_line(sfunction.definition + ";")
+            end
+          end
+          add_plan(sfunction.gid, :changed, :change)
+          add_plan(tfunction.gid, :changed, :change)
+        end
       end
 
       puts "Diffing views"
@@ -451,7 +464,16 @@ module PgDiff
       end
 
       to_be_added(:triggers).select do |trigger|
-        add(trigger, sql)
+        # don't add triggers whose views were deleted...
+        strigger = source.find_by_gid(trigger)
+        depchanged = strigger.dependencies.i_depend_on.referenced.reduce(false) do |changed, ref|
+          changed || @plan[ref.gid][:changed] || @plan[ref.gid][:removed] || @plan[ref.gid][:skipped]
+        end
+        if depchanged
+          sql << %Q{-- #{trigger} cannot be inserted because some of its dependencies changed in the current transaction, skipping ...}
+        else
+          add(trigger, sql)
+        end
       end
 
       if PgDiff.args.migration

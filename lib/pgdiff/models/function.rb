@@ -39,11 +39,17 @@ module PgDiff
         %Q{DROP FUNCTION IF EXISTS #{name}(#{argtypes});}
       end
 
-      def change(from)
-        return "" if extension_function == "t"
-        return "" if name =~ /\A(pg_catalog|information_schema)\./ && definition == from.definition
+      def changeset(target)
+        changes = Hash.new
 
-        add
+        return changes if extension_function == "t"
+        return changes if name =~ /\A(pg_catalog|information_schema)\./
+
+        if definition != target.definition
+          changes[:definition] = {}
+        end
+
+        changes
       end
     end
   end
