@@ -104,11 +104,11 @@ module PgDiff
       end
 
       def remove
-        %Q{ALTER TABLE #{table.name} DROP COLUMN #{name};}
+        %Q{ALTER TABLE #{table.name} DROP COLUMN "#{name}";}
       end
 
       def rename(newname)
-        %Q{ALTER TABLE #{table.name} RENAME COLUMN #{name} TO #{newname};}
+        %Q{ALTER TABLE #{table.name} RENAME COLUMN "#{name}" TO #{newname};}
       end
 
       def change

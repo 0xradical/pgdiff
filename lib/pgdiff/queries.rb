@@ -130,7 +130,7 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT conname, contype, conrelid, confrelid, conbin, pg_get_constraintdef(c.oid) as definition,
+        SELECT conname, contype, conrelid, confrelid, array_to_json(coalesce(conkey, '{}'::int2[])) as pk_columns, array_to_json(coalesce(confkey, '{}'::int2[])) as fk_columns, conbin, pg_get_constraintdef(c.oid) as definition,
         (pg_identify_object('pg_constraint'::regclass, c.oid, 0)).identity,
         c.oid as objid,
         '#{label}' AS origin
@@ -172,14 +172,14 @@ module PgDiff
            pg_get_indexdef(i.oid) AS indexdef,
                (
                    select
-                       array_agg(attname order by ik.n)
+                       array_to_json(array_agg(attname order by ik.n))
                    from
                         unnest(x.indkey) with ordinality ik(i, n)
                         join pg_attribute aa
                             on
                                 aa.attrelid = x.indrelid
                                 and ik.i = aa.attnum
-                )
+                ) AS columns_array
           FROM pg_index x
             JOIN pg_class c ON c.oid = x.indrelid
             JOIN pg_class i ON i.oid = x.indexrelid

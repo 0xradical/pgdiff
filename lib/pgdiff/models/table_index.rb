@@ -20,6 +20,10 @@ module PgDiff
         "INDEX"
       end
 
+      def columns
+        JSON.parse(columns_array)
+      end
+
       def gid
         "TABLE INDEX #{indexname} ON #{table.name}"
       end

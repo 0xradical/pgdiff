@@ -29,6 +29,14 @@ module PgDiff
         }.fetch(contype, "UNKNOWN")
       end
 
+      def pk_columns
+        eval(@data['pk_columns'])
+      end
+
+      def fk_columns
+        eval(@data['fk_columns'])
+      end
+
       def gid
         "TABLE CONSTRAINT #{name} ON #{table.name}"
       end
