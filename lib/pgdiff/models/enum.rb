@@ -13,6 +13,16 @@ module PgDiff
         "ENUM #{name} #{elements}"
       end
 
+      def changeset(target)
+        changes = Hash.new
+
+        if elements.join("|") != target.elements.join("|")
+          changes[:elements] = {}
+        end
+
+        changes
+      end
+
       def change(target)
         sqls = []
 

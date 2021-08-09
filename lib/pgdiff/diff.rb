@@ -71,7 +71,15 @@ module PgDiff
       sql_line(%Q{-- #{text}})
     end
 
-    def process(node)
+    def pending(gid, op, sql)
+      sql << sql_line(%Q{-- == PENDING #{op} ON #{gid} ==})
+      sql << %Q{
+---- Before:
+---- #{target.find_by_gid(gid).to_s.split("\n").map{|l| '-- ' + l}.join("\n")}
+----
+---- After:
+---- #{source.find_by_gid(gid).to_s.split("\n").map{|l| '-- ' + l}.join("\n")}
+}
     end
 
     def sql_line(line)
@@ -90,8 +98,10 @@ module PgDiff
 
       add_plan(gid, :added)
 
-      sql << header("Adding #{gid}")
-      sql << sql_line(node.add)
+      if node.add.length > 0
+        sql << header("Adding #{gid}")
+        sql << sql_line(node.add)
+      end
 
       node.dependencies.others_depend_on_me.by_type("oncreate").objects.each do |object|
         add(object.gid, sql)
@@ -116,12 +126,27 @@ module PgDiff
 
       remove_TABLE_dependencies(node, sql) if node.class.name == "PgDiff::Models::Table"
 
-      sql << header("Removing #{gid}")
-      sql << sql_line(node.remove)
+      if node.remove.length > 0
+        sql << header("Removing #{gid}")
+        sql << sql_line(node.remove)
+      end
     end
 
     def remove_TABLE_dependencies(table, sql)
       table.constraints.each do |ctt|
+        if ctt.type == "PRIMARY KEY"
+          # look for the columns , have they already been removed ?
+          index = target.find_by_gid("TABLE INDEX #{ctt.name} ON #{table.name}")
+          if index.columns.reduce(false) {|acc, col| acc || removed?("TABLE COLUMN #{col} ON #{table.name}") }
+            add_plan(ctt.gid, :skipped)
+          end
+        end
+        if ctt.type == "FOREIGN KEY"
+          # if columns i referenced were removed...
+          if ctt.pk_columns.reduce(false) {|acc, colidx| acc || removed?("TABLE COLUMN #{table.columns[colidx -1].name} ON #{table.name}") }
+            add_plan(ctt.gid, :skipped)
+          end
+        end
         target.dependencies_subgraph_for(ctt.gid).order[0..-2].select do |dep|
           dep !~ /RI_ConstraintTrigger/
         end.each do |dep|
@@ -129,6 +154,10 @@ module PgDiff
         end
       end
       table.indexes.each do |idx|
+        # if columns i referenced were removed ...
+        if idx.columns.reduce(false) {|acc, col| acc || removed?("TABLE COLUMN #{col} ON #{table.name}") }
+          add_plan(idx.gid, :skipped)
+        end
         target.dependencies_subgraph_for(idx.gid).order[0..-2].select do |dep|
           dep !~ /RI_ConstraintTrigger/
         end.each do |dep|
@@ -155,6 +184,7 @@ module PgDiff
     end
 
     def to_sql
+      presql = []
       sql = []
 
       sql << sql_line("BEGIN;")
@@ -216,18 +246,20 @@ module PgDiff
       end
 
       # ALTER TYPE cannot run inside a transaction block
-      # to_be_changed(:enums).each do |gid|
-      #   # detect enum renaming ?
-      #   change(gid, :change, sql) do |_, _|
-      #     senum = source.find_by_gid(gid)
-      #     tenum = target.find_by_gid(gid)
+      to_be_changed(:enums).each do |gid|
+        senum = source.find_by_gid(gid)
+        tenum = target.find_by_gid(gid)
 
-      #     sql << senum.change(tenum)
+        senum.changeset(tenum).each_pair do |k, _|
+          case k
+          when :elements
+            presql << senum.change(tenum)
+          end
 
-      #     add_plan(senum.gid, :changed, :change)
-      #     add_plan(tenum.gid, :changed, :change)
-      #   end
-      # end
+          add_plan(senum.gid, :changed, :change)
+          add_plan(tenum.gid, :changed, :change)
+        end
+      end
 
       puts "Diffing aggregates"
       sql << SPACER << "---- AGGREGATES ----" << SPACER
@@ -239,6 +271,9 @@ module PgDiff
         remove(gid, sql)
       end
 
+      to_be_changed(:aggregates).select do |gid|
+        pending(gid, :change, sql)
+      end
 
       puts "Diffing other types"
       sql << SPACER << "---- TYPES ----" << SPACER
@@ -248,6 +283,10 @@ module PgDiff
 
       to_be_removed(:types).select do |type|
         remove(type, sql)
+      end
+
+      to_be_changed(:types).select do |type|
+        pending(type, :change, sql)
       end
 
       puts "Diffing domains"
@@ -262,6 +301,10 @@ module PgDiff
         remove(domain, sql)
       end
 
+      to_be_changed(:domains).select do |domain|
+        pending(domain, :change, sql)
+      end
+
       puts "Diffing sequences"
       sql << SPACER << "---- SEQUENCES ----" << SPACER
       to_be_added(:sequences).select do |sequence|
@@ -270,6 +313,10 @@ module PgDiff
 
       to_be_removed(:sequences).select do |sequence|
         remove(sequence, sql)
+      end
+
+      to_be_changed(:sequences).select do |sequence|
+        pending(sequence, :change, sql)
       end
 
       puts "Diffing tables"
@@ -282,7 +329,6 @@ module PgDiff
       end
 
       to_be_removed(:tables).select do |table|
-        binding.pry if table == "TABLE app.sub_categories_topics"
         remove(table, sql)
       end
 
@@ -293,12 +339,22 @@ module PgDiff
 
         changes.each_pair do |gid, options|
           case options[:op]
+          when :add
+            add(gid, sql)
           when :remove
             node = target.find_by_gid(gid)
-            target.dependencies_subgraph_for(gid).reverse_order.each do |dgid|
-              ## remove ??
+            views = []
+            target.dependencies_subgraph_for(gid).order.each do |dgid|
+              if dgid =~ /MATERIALIZED VIEW/
+                views << dgid
+                remove(dgid, sql)
+              end
+              if dgid =~ /TRIGGER/
+                remove(dgid, sql)
+              end
             end
             remove(gid, sql)
+            views.each{|v| add(v, sql)}
           when :rename
             change(gid, options[:op], sql) do |_, tnode|
               snode = source.find_by_gid(options[:source])
@@ -306,7 +362,7 @@ module PgDiff
               add_plan(snode.gid, :changed, options[:op])
             end
           else
-            # ??
+            pending(gid, options[:op], sql)
           end
         end
       end
@@ -321,17 +377,22 @@ module PgDiff
         remove(function, sql)
       end
 
+      to_be_changed(:functions).select do |function|
+        pending(function, :change, sql)
+      end
+
       puts "Diffing views"
       sql << SPACER << "---- VIEWS ----" << SPACER
       to_be_added(:views).select do |view|
         sview = source.find_by_gid(view)
         if sview
           something_changed = sview.dependencies.i_depend_on.referenced.reduce(false) do |changed, ref|
-            changed || @plan[ref.gid][:changed]
+            changed || @plan[ref.gid][:changed] || @plan[ref.gid][:removed]
           end
 
           if something_changed
             sql << %Q{-- #{view} cannot be inserted because some of its dependencies changed in the current transaction, skipping ...}
+            add_plan(view, :skipped)
           else
             add(view, sql)
           end
@@ -342,13 +403,17 @@ module PgDiff
         remove(view, sql)
       end
 
-      puts "Diffing triggers"
-      to_be_added(:triggers).select do |trigger|
-        add(trigger, sql)
+      to_be_changed(:views).select do |view|
+        pending(view, :change, sql)
       end
 
+      puts "Diffing triggers"
       to_be_removed(:triggers).select do |trigger|
         remove(trigger, sql)
+      end
+
+      to_be_added(:triggers).select do |trigger|
+        add(trigger, sql)
       end
 
       if PgDiff.args.migration
@@ -359,7 +424,11 @@ module PgDiff
 
       sql << SPACER << sql_line("COMMIT;")
 
-      sql.join("\n")
+      if presql.length > 0
+        presql.join("\n") + SPACER + sql.join("\n")
+      else
+        sql.join("\n")
+      end
     end
   end
 end
