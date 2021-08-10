@@ -12,6 +12,10 @@ module PgDiff
         }
       end
 
+      def schema
+        nspname
+      end
+
       def changeset(target)
         changes = Hash.new
 
@@ -24,6 +28,10 @@ module PgDiff
 
       def world_type
         "AGGREGATE"
+      end
+
+      def ddl
+        add
       end
 
       def add

@@ -77,7 +77,7 @@ module PgDiff
         @sequences << sequence
       end
 
-      def add
+      def ddl
         %Q{CREATE TABLE #{name} (\n} +
         [
           columns.map do |column|
@@ -87,7 +87,12 @@ module PgDiff
             "    " + constraint.indexdef
           end
         ].flatten.join(",\n") +
-        %Q{\n);\n\n} +
+        %Q{\n);\n}
+      end
+
+      def add
+        ddl +
+        "\n" +
         indexes.select{|idx| !constraints.map(&:name).include?(idx.name) }.map do |index|
           %Q{#{index.indexdef};}
         end.join("\n") +

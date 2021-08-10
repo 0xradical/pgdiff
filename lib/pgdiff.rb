@@ -40,6 +40,7 @@ require_relative "pgdiff/diff.rb"
 require_relative "pgdiff/cli/options.rb"
 require_relative "pgdiff/cli/parser.rb"
 require_relative "pgdiff/cli.rb"
+require_relative "pgdiff/destructurer.rb"
 
 def PgDiff.args=(args)
   @args = args

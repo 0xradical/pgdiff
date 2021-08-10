@@ -16,7 +16,9 @@ module PgDiff
       :output_dir,
       :timestamp,
       :name,
-      :migration
+      :migration,
+      :user_id,
+      :group_id
     )
       def self.default
         self.new(
@@ -35,6 +37,8 @@ module PgDiff
           nil,
           Time.now.strftime('%Y%m%d%H%M%S'),
           "new-migration",
+          nil,
+          nil,
           nil
         )
       end

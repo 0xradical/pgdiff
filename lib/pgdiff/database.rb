@@ -85,6 +85,7 @@ module PgDiff
           view = @world.find_by_gid("VIEW #{trigger.table_schema}.#{trigger.table_name}") || @world.find_by_gid("MATERIALIZED VIEW #{trigger.table_schema}.#{trigger.table_name}")
           if view
             trigger.view = view
+            view.add_trigger(trigger)
             @world.add_dependency(
               PgDiff::Dependency.new(
                 trigger,

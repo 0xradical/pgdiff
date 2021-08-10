@@ -81,6 +81,10 @@ DELETE FROM pg_enum
         @data['elements'][/\{(.*)\}/,1].split(/\s*,\s*/)
       end
 
+      def ddl
+        add
+      end
+
       def add
         return "" if from_extension == "t"
 

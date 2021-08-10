@@ -21,6 +21,10 @@ module PgDiff
         JSON.parse(@data['columns'])
       end
 
+      def ddl
+        add
+      end
+
       def add
         %Q{CREATE TYPE #{name} AS (\n}+
         columns.map do |column|

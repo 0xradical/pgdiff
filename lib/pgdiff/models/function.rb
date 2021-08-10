@@ -27,6 +27,10 @@ module PgDiff
         "FUNCTION"
       end
 
+      def ddl
+        add
+      end
+
       def add
         return "" if extension_function == "t"
 

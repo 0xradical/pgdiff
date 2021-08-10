@@ -24,6 +24,10 @@ module PgDiff
         @privilege = privilege
       end
 
+      def ddl
+        add
+      end
+
       def add
         %Q{CREATE SEQUENCE IF NOT EXISTS #{name}
   INCREMENT BY #{increment}

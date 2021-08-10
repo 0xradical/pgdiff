@@ -17,6 +17,10 @@ module PgDiff
         JSON.parse(@data['ops'])
       end
 
+      def ddl
+        add
+      end
+
       def add
         ""
       end

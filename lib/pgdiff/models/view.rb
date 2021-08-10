@@ -1,11 +1,12 @@
 module PgDiff
   module Models
     class View < Base
-      attr_reader :privilege
+      attr_reader :privilege, :triggers
 
       def initialize(data)
         super(data)
         @privilege = nil
+        @triggers = []
       end
 
       def materialized?
@@ -14,6 +15,10 @@ module PgDiff
 
       def name
         "#{schemaname}.#{viewname}"
+      end
+
+      def add_trigger(trigger)
+        @triggers << trigger
       end
 
       def world_type
@@ -26,6 +31,10 @@ module PgDiff
 
       def add_privilege(privilege)
         @privilege = privilege
+      end
+
+      def ddl
+        add
       end
 
       def add

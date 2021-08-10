@@ -72,7 +72,7 @@ module PgDiff
       def add
         sql = []
         # return "" if PgDiff.args.ignore_roles.include?(user)
-        privileges.each do |user, privilege|
+        privileges.sort_by{|user, _| user }.each do |user, privilege|
           next if PgDiff.args.ignore_roles.include?(user)
 
           if privilege["EXECUTE"]
@@ -80,6 +80,8 @@ module PgDiff
           else
             sql << %Q{REVOKE EXECUTE ON FUNCTION #{function.name}(#{function.argtypes}) FROM "#{user}";}
           end
+
+          sql << "\n"
         end
 
         sql.join("\n")

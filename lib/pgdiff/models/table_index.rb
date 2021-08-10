@@ -32,6 +32,9 @@ module PgDiff
         "TABLE INDEX #{indexdef}"
       end
 
+      def ddl
+        "#{indexdef};"
+      end
       def add
         # "#{indexdef};"
         ""

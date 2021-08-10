@@ -15,6 +15,10 @@ module PgDiff
         %Q{#{definition};}
       end
 
+      def ddl
+        add
+      end
+
       def gid
         definition
       end

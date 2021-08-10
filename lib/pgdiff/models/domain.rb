@@ -34,13 +34,26 @@ module PgDiff
         %Q{DOMAIN #{name} AS #{data_type} #{'NOT NULL' if not_null == 't'} #{'DEFAULT ' + default if default}}
       end
 
+      def system?
+        return true if from_extension == "t"
+        return true if schema == "information_schema" || schema == "pg_catalog"
+
+        false
+      end
+
+      def ddl
+        add
+      end
+
       def add
-        return "" if from_extension == "t"
+        return "" if system?
 
         %Q{CREATE DOMAIN #{name} AS #{data_type};}
       end
 
       def remove
+        return "" if system?
+
         %Q{DROP DOMAIN #{name};}
       end
 

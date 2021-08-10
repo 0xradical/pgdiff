@@ -77,9 +77,13 @@ module PgDiff
         }
       end
 
+      def ddl
+        add
+      end
+
       def add
         sql = []
-        privileges.each do |user, user_privileges|
+        privileges.sort_by{|user, _| user }.each do |user, user_privileges|
           next if PgDiff.args.ignore_roles.include?(user)
 
           sql << %Q{REVOKE ALL PRIVILEGES ON #{name} FROM "#{user}";}
@@ -89,6 +93,8 @@ module PgDiff
               sql << %Q{GRANT #{operation} ON #{name} TO "#{user}";}
             end
           end
+
+          sql << "\n"
         end
 
         sql.join("\n")

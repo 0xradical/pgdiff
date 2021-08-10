@@ -17,6 +17,10 @@ module PgDiff
         %Q{ROLE "#{name}" #{rolinherit == 't' ? 'INHERIT' : 'NOINHERIT'} #{rolcanlogin == 't' ? 'LOGIN' : 'NOLOGIN'}}
       end
 
+      def ddl
+        add
+      end
+
       def add
         return "" if PgDiff.args.ignore_roles.include?(name)
 

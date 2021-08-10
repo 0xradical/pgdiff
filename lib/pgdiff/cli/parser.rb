@@ -63,6 +63,12 @@ module PgDiff
           opts.on("--name [NAME]", "Optional migration name (default: new-migration)") do |opt|
             args.name = opt
           end
+          opts.on("--user-id [USER-ID]", "Optional system user id that will own emitted files / folders") do |opt|
+            args.user_id = opt
+          end
+          opts.on("--group-id [GROUP-ID]", "Optional system group id that will own emitted files / folders") do |opt|
+            args.group_id = opt
+          end
         end
 
         begin
@@ -72,10 +78,10 @@ module PgDiff
             :source_database,
             :source_password,
             :source_user,
-            :target_host,
-            :target_database,
-            :target_password,
-            :target_user
+            # :target_host,
+            # :target_database,
+            # :target_password,
+            # :target_user
           ]
           missing = mandatory.select{ |param| args.send(param).nil? || args.send(param).to_s.empty?  }
           raise OptionParser::MissingArgument, missing.map{|a| a.to_s.gsub(/_/,'-') }.join(', ') unless missing.empty?

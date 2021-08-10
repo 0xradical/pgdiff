@@ -74,6 +74,10 @@ module PgDiff
         }
       end
 
+      def ddl
+        add
+      end
+
       def add
         sql = []
         privileges.each do |user, user_privileges|

@@ -31,6 +31,10 @@ module PgDiff
         changes
       end
 
+      def ddl
+        add
+      end
+
       def add
         return "" if category == "A"
         return "" if columns.empty?
