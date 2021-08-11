@@ -22,6 +22,8 @@ module PgDiff
 
       def columns
         JSON.parse(columns_array)
+      rescue
+        []
       end
 
       def gid

@@ -222,7 +222,7 @@ module PgDiff
       end
 
       to_be_removed(:schemas).each do |gid|
-        remove(schema)
+        remove(gid, sql)
       end
 
       puts "Diffing extensions"
