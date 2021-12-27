@@ -1,9 +1,14 @@
-# AS per SELECT version(); on production
-FROM postgres:11.10
+ARG POSTGRES_VERSION=13.3
 
+FROM postgres:$POSTGRES_VERSION
+
+# AS per SELECT version(); on production
+ARG PLV8_VERSION=2.3.15
 #  AS per SELECT name, default_version FROM pg_available_extensions where name = 'plv8' on production;
 # Version 2.3.9 is 2.3.8 fixed for pg11 compilation
-ENV PLV8_VERSION=2.3.9
+ENV PLV8_VERSION=$PLV8_VERSION
+
+RUN apt update && apt install -qy libncurses5 libc++abi-dev
 
 RUN buildDependencies="build-essential \
     ca-certificates \

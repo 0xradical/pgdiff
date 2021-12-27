@@ -1,4 +1,4 @@
-VERSION := 0.2.0
+VERSION := 1.0.0
 
 build:
 	@docker build -f Dockerfile . -t classpert/pgdiff:$(VERSION)
@@ -24,6 +24,9 @@ console: up
 
 sql: up
 	@bundle exec ruby -r ./lib/pgdiff.rb -r ./bin/console.rb
+
+bash:
+	@docker run --rm -it classpert/pgdiff:$(VERSION) sh
 
 diff: up
 	@rm -f pgdiff.sql

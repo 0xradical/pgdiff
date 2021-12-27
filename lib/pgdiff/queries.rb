@@ -81,7 +81,7 @@ module PgDiff
       schema, table = schema_and_table(table_name)
 
       query(%Q{
-        SELECT relhasoids, '#{label}' AS origin
+        SELECT 'f' AS relhasoids, '#{label}' AS origin
         FROM pg_class c
         INNER JOIN pg_namespace n ON n."oid" = c.relnamespace AND n.nspname = '#{schema}'
         WHERE c.relname = '#{table}';
