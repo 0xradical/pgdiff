@@ -1,8 +1,8 @@
-VERSION := 1.0.0
+VERSION := 1.0.1
 
 build:
-	@docker build -f Dockerfile . -t classpert/pgdiff:$(VERSION)
-	@docker build -f Dockerfile.database . -t classpert/pgdiff-database
+	@docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile . -t classpert/pgdiff:$(VERSION) --push
+	@docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.database . -t classpert/pgdiff-database --push
 
 push:
 	@docker push classpert/pgdiff:$(VERSION)
