@@ -1,11 +1,11 @@
-VERSION := 1.0.1
+.PHONY: clean
 
 build:
-	@docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile . -t classpert/pgdiff:$(VERSION) --push
-	@docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.database . -t classpert/pgdiff-database --push
+	@docker build -f Dockerfile . -t pgdiff --push
 
-push:
-	@docker push classpert/pgdiff:$(VERSION)
+clean:
+	@rm -rf output
+	@mkdir output
 
 up:
 	@make -s down
@@ -26,19 +26,43 @@ sql: up
 	@bundle exec ruby -r ./lib/pgdiff.rb -r ./bin/console.rb
 
 bash:
-	@docker run --rm -it classpert/pgdiff:$(VERSION) sh
+	@docker run --rm -it pgdiff sh
 
+# run this to make sure that diff is working
+# i.e., the structures should have no difference
+# when the diff is applied
 diff: up
 	@rm -f pgdiff.sql
 	@echo 'Generating pgdiff.sql'
 	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/test.rb
 	@echo 'Applying generated pgdiff.sql'
 	@cat pgdiff.sql
-	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql classpert/pgdiff:$(VERSION) sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
+	@docker run --rm -ti --name pgdiff_migration --network pgdiff --env-file ${PWD}/database.env -v ${PWD}/pgdiff.sql:/pgdiff.sql pgdiff sh -c "cat /pgdiff.sql | PGPASSWORD=\$$POSTGRES_PASSWORD psql -h target.database.io -U \$$POSTGRES_USER -d \$$POSTGRES_DB"
 	@echo 'Generating another pgdiff.sql to compare'
 	@mv pgdiff.sql pgdiff.initial.sql
 	@bundle exec ruby -r ./lib/pgdiff.rb ./bin/test.rb
 	@cat pgdiff.sql
+
+structure-example: clean up
+	@ruby bin/destructure.rb --source-host 0.0.0.0 \
+	                         --source-port 54532 \
+													 --source-user postgres \
+													 --source-password postgres \
+													 --source-database pgdiff \
+													 --output-dir ./output
+
+pgdiff-example: clean up
+	@ruby bin/pgdiff.rb --source-host 0.0.0.0 \
+	                    --source-port 54533 \
+											--source-user postgres \
+											--source-password postgres \
+											--source-database pgdiff \
+											--target-host 0.0.0.0 \
+											--target-port 54532 \
+											--target-user postgres \
+											--target-password postgres \
+											--target-database pgdiff \
+											--output-dir ./output
 
 test: up
 	@bundle exec rake test

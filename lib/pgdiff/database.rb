@@ -19,7 +19,9 @@ module PgDiff
           end
           break
         rescue PG::ConnectionBad
-          print "Waiting for database '#{@label}' to be up... "
+          if @retries == 0
+            print "Waiting for database '#{@label}' to be up... "
+          end
           sleep(1)
           @retries += 1
         end

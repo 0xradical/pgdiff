@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   source.database.io:
-    image: classpert/pgdiff-database
+    image: postgres:13.3
     container_name: source.database.io
     restart: always
     build: .
@@ -15,7 +15,7 @@ services:
       - ./entrypoints/source.sql:/setup.sql
 
   target.database.io:
-    image: classpert/pgdiff-database
+    image: postgres:13.3
     container_name: target.database.io
     restart: always
     build: .

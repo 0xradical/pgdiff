@@ -1,3 +1,5 @@
+require "bundler/setup"
+require_relative "../lib/pgdiff"
 require "fileutils"
 
 PgDiff.args = PgDiff::Cli.parse(ARGV)
