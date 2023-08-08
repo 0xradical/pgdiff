@@ -11,8 +11,8 @@ tables, views, extensions, roles and schemas.
 ## Motivation
 
 Image you keep a structure.sql file that describes your database structure. This tool is responsible for,
-given a change in this structure.sql file, generate the corresponding DDL statements, when run in the target database,
-applies the changes that match the updated structure.sql.
+given a change in this structure.sql file, generate the corresponding DDL statement that when run in the target database
+applies the changes to match the updated structure.sql.
 
 ## Getting Started
 
