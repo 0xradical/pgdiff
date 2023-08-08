@@ -8,6 +8,12 @@ It can also create a structure folder from any database. This folder contains al
 structural components of a postgres database: aggregates, composites, domains, enums, functions,
 tables, views, extensions, roles and schemas.
 
+## Motivation
+
+Image you keep a structure.sql file that describes your database structure. This tool is responsible for,
+given a change in this structure.sql file, generate the corresponding DDL statements, when run in the target database,
+applies the changes that match the updated structure.sql.
+
 ## Getting Started
 
 In order to use and test this tool, I've set up docker compose files that 
